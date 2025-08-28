@@ -1,0 +1,175 @@
+Guided Assignment Workshop: Modern
+Enterprise Application Development
+---
+
+📅 Assignment Title: Developing a Modern Enterprise Application Using
+Contemporary Tech Stack
+🎓 Target Audience: Undergraduate Students (3rd/4th Year - IT, SE, CS)
+🔎 Objective:
+To build a modern enterprise-level web application by leveraging widely adopted modern
+technologies. This assignment replaces traditional Java EE technologies like Servlets, JSP, and
+EJBs with updated, scalable, and developer-friendly solutions.
+
+⚖️ Modern Tech Stack Overview
+Legacy Technology
+Servlets
+JSP
+EJB
+XML Config
+SOAP Web Services
+Application Server
+JDBC
+
+Modern Equivalent
+REST APIs using Spring Boot
+React.js or Angular for frontend
+Spring Boot Services or Microservices (with
+Spring Data JPA)
+YAML / Annotations
+RESTful Web Services (JSON)
+Embedded Tomcat / Docker
+Spring Data JPA / Hibernate
+
+🏙️ Project Theme: University Course Management System
+Build a system to manage course offerings, student registrations, and results.
+
+✅ Assignment Deliverables
+1. Functional Web Application (Backend + Frontend)
+2. Source Code with GitHub Link
+3. Deployment Instructions
+4. Project Report (PDF)
+
+🔧 Step-by-Step Workshop Guide
+Step 1: Set Up the Environment
+•
+•
+•
+•
+•
+
+Install JDK 17
+Install Node.js (v16+)
+Install Spring Boot CLI or use Spring Initializr
+Use VS Code or IntelliJ IDEA
+Install Docker Desktop (optional)
+
+Step 2: Backend - Spring Boot Application
+•
+•
+•
+
+•
+•
+
+•
+•
+
+a. Create a Spring Boot App using https://start.spring.io/
+b. Define the Entities:
+```java
+@Entity
+public class Course {
+@Id @GeneratedValue
+private Long id;
+private String title;
+private String code;
+}
+```
+c. Create Repositories:
+```java
+@Repository
+public interface CourseRepository extends JpaRepository<Course, Long> {}
+```
+d. Build REST Controllers:
+```java
+@RestController
+@RequestMapping("/api/courses")
+public class CourseController {
+@Autowired
+private CourseRepository repo;
+@GetMapping
+public List<Course> getAll() {
+return repo.findAll();
+}
+
+•
+
+}
+```
+e. Run the Backend and test: `http://localhost:8080/api/courses`
+
+Step 3: Frontend - React.js App
+•
+•
+
+•
+•
+
+•
+•
+
+a. Create App:
+```bash
+npx create-react-app course-management-ui
+cd course-management-ui
+npm start
+```
+b. Fetch Data from Backend:
+```javascript
+useEffect(() => {
+fetch("http://localhost:8080/api/courses")
+.then(res => res.json())
+.then(data => setCourses(data));
+}, []);
+```
+c. Display in Table:
+```jsx
+<table>
+<thead><tr><th>Code</th><th>Title</th></tr></thead>
+<tbody>
+{courses.map(c => <tr key={c.id}><td>{c.code}</td><td>{c.title}</td></tr>)}
+</tbody>
+</table>
+```
+
+Step 4: Connect to MySQL (Optional)
+•
+•
+
+•
+
+Use Docker to start MySQL:
+```bash
+docker run -d -p 3306:3306 --name mysql -e MYSQL_ROOT_PASSWORD=root mysql
+```
+Update `application.yml` with datasource config
+
+Step 5: Deployment
+•
+•
+
+Use Dockerfile to containerize
+Host on Render / Heroku / Railway
+
+🔺 Evaluation Criteria
+Area
+Functionality
+Code Quality
+Modern Tech Adoption
+UI/UX Design
+Documentation & Report
+
+Marks
+30
+20
+20
+10
+20
+
+📊 Summary
+This workshop helps to experience the modern enterprise application development by
+implementing a full-stack project using Spring Boot and React. By replacing legacy technologies,
+students gain hands-on knowledge relevant to today’s job market.
+End of Workshop
+
+

@@ -1,0 +1,59 @@
+{
+  "name": "course-management-system",
+  "version": "1.0.0",
+  "description": "University Course Management System - Full Stack Application",
+  "main": "index.js",
+  "scripts": {
+    "install:frontend": "cd frontend && npm install",
+    "install:backend": "cd backend && mvn clean install",
+    "install:all": "npm run install:frontend && npm run install:backend",
+    "start:frontend": "cd frontend && npm start",
+    "start:backend": "cd backend && mvn spring-boot:run",
+    "start:database": "cd database && docker-compose up -d",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && mvn clean package",
+    "build:all": "npm run build:frontend && npm run build:backend",
+    "test:frontend": "cd frontend && npm test",
+    "test:backend": "cd backend && mvn test",
+    "test:all": "npm run test:frontend && npm run test:backend",
+    "docker:dev": "cd deployment && docker-compose up -d",
+    "docker:prod": "cd deployment && docker-compose -f production.yml up -d",
+    "docker:stop": "cd deployment && docker-compose down",
+    "docker:build": "cd deployment && docker-compose build",
+    "docker:logs": "cd deployment && docker-compose logs -f",
+    "database:start": "cd database && docker-compose up -d",
+    "database:stop": "cd database && docker-compose down",
+    "database:backup": "cd database && docker-compose exec mysql mysqldump -u root -p course_management_system > backup_$(date +%Y%m%d_%H%M%S).sql",
+    "lint:frontend": "cd frontend && npm run lint",
+    "format:frontend": "cd frontend && npm run format",
+    "clean": "rm -rf frontend/build backend/target frontend/node_modules",
+    "setup": "npm run install:all && npm run start:database",
+    "dev": "npm run install:all && npm run start:database && concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "prod": "npm run build:all && npm run docker:prod"
+  },
+  "keywords": [
+    "course-management",
+    "university",
+    "spring-boot",
+    "react",
+    "education",
+    "learning-management"
+  ],
+  "author": "University Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/university/course-management-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/university/course-management-system/issues"
+  },
+  "homepage": "https://github.com/university/course-management-system#readme",
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}
