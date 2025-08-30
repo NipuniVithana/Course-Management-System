@@ -1,44 +1,35 @@
 import React, { useState } from 'react';
 import {
-  Container,
-  Paper,
-  TextField,
+  Form,
+  Input,
   Button,
   Typography,
-  Box,
+  Card,
   Alert,
-  CircularProgress,
-  Link
-} from '@mui/material';
+  Space,
+  Divider,
+  Row,
+  Col
+} from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
+const { Title, Text, Link } = Typography;
+
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   
   const { login, error, clearError } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    if (error) clearError();
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (values) => {
     setLoading(true);
     
     try {
-      console.log('Attempting login with:', formData.email);
-      const result = await login(formData.email, formData.password);
+      console.log('Attempting login with:', values.email);
+      const result = await login(values.email, values.password);
       console.log('Login successful:', result);
       navigate('/dashboard');
     } catch (err) {
@@ -48,92 +39,134 @@ const Login = () => {
     }
   };
 
+  const handleFormChange = () => {
+    if (error) clearError();
+  };
+
   return (
-    <Container component="main" maxWidth="sm">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Course Management System
-          </Typography>
-          <Typography component="h2" variant="h5" align="center" gutterBottom>
-            Sign In
-          </Typography>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#ffffff',
+      padding: '20px'
+    }}>
+      <Row justify="center" style={{ width: '100%' }}>
+        <Col xs={24} sm={20} md={16} lg={12} xl={8}>
+          <Card
+            style={{
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              borderRadius: '12px',
+              border: 'none'
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <Title level={2} style={{ color: '#1890ff', marginBottom: '8px' }}>
+                Course Management System
+              </Title>
+              <Title level={4} style={{ color: '#666', fontWeight: 400 }}>
+                Sign In to Your Account
+              </Title>
+            </div>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+            {error && (
+              <Alert
+                message={error}
+                type="error"
+                style={{ marginBottom: '24px' }}
+                closable
+                onClose={clearError}
+              />
+            )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={formData.email}
-              onChange={handleChange}
-              disabled={loading}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleChange}
-              disabled={loading}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+            <Form
+              form={form}
+              name="login"
+              onFinish={handleSubmit}
+              onValuesChange={handleFormChange}
+              layout="vertical"
+              requiredMark={false}
             >
-              {loading ? <CircularProgress size={24} /> : 'Sign In'}
-            </Button>
-            
-            <Box textAlign="center">
-              <Link component={RouterLink} to="/register" variant="body2">
-                Don't have an account? Sign Up
-              </Link>
-            </Box>
-          </Box>
+              <Form.Item
+                name="email"
+                label="Email Address"
+                rules={[
+                  { required: true, message: 'Please input your email!' },
+                  { type: 'email', message: 'Please enter a valid email!' }
+                ]}
+              >
+                <Input
+                  prefix={<UserOutlined />}
+                  placeholder="Enter your email"
+                  size="large"
+                  disabled={loading}
+                />
+              </Form.Item>
 
-          {/* Demo Login Credentials */}
-          <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Demo Credentials:
-            </Typography>
-            <Typography variant="body2">
-              <strong>Admin:</strong> admin@university.edu / admin123
-            </Typography>
-            <Typography variant="body2">
-              <strong>Lecturer:</strong> lecturer@university.edu / lecturer123
-            </Typography>
-            <Typography variant="body2">
-              <strong>Student:</strong> student@university.edu / student123
-            </Typography>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+              <Form.Item
+                name="password"
+                label="Password"
+                rules={[{ required: true, message: 'Please input your password!' }]}
+              >
+                <Input.Password
+                  prefix={<LockOutlined />}
+                  placeholder="Enter your password"
+                  size="large"
+                  disabled={loading}
+                />
+              </Form.Item>
+
+              <Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  size="large"
+                  block
+                  style={{ marginTop: '16px' }}
+                >
+                  Sign In
+                </Button>
+              </Form.Item>
+            </Form>
+
+            <div style={{ textAlign: 'center' }}>
+              <Text>Don't have an account? </Text>
+              <Link>
+                <RouterLink to="/register">Sign Up</RouterLink>
+              </Link>
+            </div>
+
+            <Divider>Demo Credentials</Divider>
+
+            <Card 
+              size="small" 
+              style={{ 
+                background: '#f8f9fa', 
+                border: '1px solid #e9ecef',
+                borderRadius: '8px'
+              }}
+            >
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div>
+                  <Text strong style={{ color: '#1890ff' }}>Admin:</Text>
+                  <Text style={{ marginLeft: '8px' }}>admin@university.edu / admin123</Text>
+                </div>
+                <div>
+                  <Text strong style={{ color: '#52c41a' }}>Lecturer:</Text>
+                  <Text style={{ marginLeft: '8px' }}>lecturer@university.edu / lecturer123</Text>
+                </div>
+                <div>
+                  <Text strong style={{ color: '#fa8c16' }}>Student:</Text>
+                  <Text style={{ marginLeft: '8px' }}>student@university.edu / student123</Text>
+                </div>
+              </Space>
+            </Card>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 };
 

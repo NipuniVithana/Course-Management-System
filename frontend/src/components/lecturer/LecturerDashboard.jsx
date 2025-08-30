@@ -1,557 +1,652 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Grid,
+  Row,
+  Col,
   Card,
-  CardContent,
-  Typography,
-  Button,
+  Statistic,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
+  Button,
+  Modal,
+  Form,
+  Input,
+  DatePicker,
+  Select,
+  Tag,
+  Space,
+  Typography,
   Tabs,
-  Tab
-} from '@mui/material';
+  message,
+  Popconfirm,
+  InputNumber,
+  Badge
+} from 'antd';
 import {
-  Add as AddIcon,
-  Grade as GradeIcon,
-  Assignment as AssignmentIcon,
-  People as PeopleIcon,
-  Edit as EditIcon,
-  Visibility as ViewIcon
-} from '@mui/icons-material';
+  BookOutlined,
+  UserOutlined,
+  FileTextOutlined,
+  CalendarOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  DownloadOutlined
+} from '@ant-design/icons';
 import lecturerService from '../../services/lecturerService';
+import dayjs from 'dayjs';
 
-function TabPanel({ children, value, index, ...other }) {
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+const { Title } = Typography;
+const { Option } = Select;
+const { TabPane } = Tabs;
+const { TextArea } = Input;
 
 const LecturerDashboard = () => {
-  const [activeTab, setActiveTab] = useState(0);
+  const [dashboardData, setDashboardData] = useState({
+    totalCourses: 0,
+    totalStudents: 0,
+    pendingGrades: 0,
+    upcomingClasses: 0
+  });
   const [courses, setCourses] = useState([]);
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [students, setStudents] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Dialog states
-  const [openAssignmentDialog, setOpenAssignmentDialog] = useState(false);
-  const [openGradeDialog, setOpenGradeDialog] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
+  
+  // Modal states
+  const [assignmentModalVisible, setAssignmentModalVisible] = useState(false);
+  const [gradeModalVisible, setGradeModalVisible] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-
-  // Form states
-  const [assignmentForm, setAssignmentForm] = useState({
-    title: '',
-    description: '',
-    dueDate: '',
-    maxPoints: 100,
-    courseId: ''
-  });
-
-  const [gradeForm, setGradeForm] = useState({
-    pointsEarned: '',
-    feedback: ''
-  });
+  
+  // Forms
+  const [assignmentForm] = Form.useForm();
+  const [gradeForm] = Form.useForm();
 
   useEffect(() => {
     loadDashboardData();
   }, []);
 
-  useEffect(() => {
-    if (selectedCourse) {
-      loadCourseData(selectedCourse.id);
-    }
-  }, [selectedCourse]);
-
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const coursesData = await lecturerService.getMyCourses();
-      setCourses(coursesData);
+      const [
+        dashStats,
+        coursesData,
+        assignmentsData,
+        submissionsData,
+        studentsData
+      ] = await Promise.all([
+        lecturerService.getDashboardStats(),
+        lecturerService.getCourses(),
+        lecturerService.getAssignments(),
+        lecturerService.getSubmissions(),
+        lecturerService.getStudents()
+      ]);
       
-      if (coursesData.length > 0) {
-        setSelectedCourse(coursesData[0]);
-      }
+      setDashboardData(dashStats);
+      setCourses(coursesData);
+      setAssignments(assignmentsData);
+      setSubmissions(submissionsData);
+      setStudents(studentsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      message.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadCourseData = async (courseId) => {
+  const handleAssignmentSubmit = async (values) => {
     try {
-      const [studentsData, assignmentsData] = await Promise.all([
-        lecturerService.getEnrolledStudents(courseId),
-        lecturerService.getAssignments(courseId)
-      ]);
-      
-      setStudents(studentsData);
-      setAssignments(assignmentsData);
-    } catch (error) {
-      console.error('Error loading course data:', error);
-    }
-  };
+      setTableLoading(true);
+      const assignmentData = {
+        ...values,
+        dueDate: values.dueDate.format('YYYY-MM-DD HH:mm:ss')
+      };
 
-  const handleCreateAssignment = async (e) => {
-    e.preventDefault();
-    try {
-      await lecturerService.createAssignment({
-        ...assignmentForm,
-        courseId: selectedCourse.id
-      });
-      
-      setOpenAssignmentDialog(false);
-      setAssignmentForm({
-        title: '',
-        description: '',
-        dueDate: '',
-        maxPoints: 100,
-        courseId: ''
-      });
-      
-      if (selectedCourse) {
-        loadCourseData(selectedCourse.id);
+      if (selectedAssignment) {
+        await lecturerService.updateAssignment(selectedAssignment.id, assignmentData);
+        message.success('Assignment updated successfully');
+      } else {
+        await lecturerService.createAssignment(assignmentData);
+        message.success('Assignment created successfully');
       }
+
+      setAssignmentModalVisible(false);
+      assignmentForm.resetFields();
+      setSelectedAssignment(null);
+      await loadDashboardData();
     } catch (error) {
-      console.error('Error creating assignment:', error);
+      console.error('Error saving assignment:', error);
+      message.error('Failed to save assignment');
+    } finally {
+      setTableLoading(false);
     }
   };
 
-  const handleViewSubmissions = async (assignment) => {
+  const handleGradeSubmit = async (values) => {
     try {
-      const submissionsData = await lecturerService.getSubmissions(assignment.id);
-      setSubmissions(submissionsData);
-      setActiveTab(3); // Switch to submissions tab
-    } catch (error) {
-      console.error('Error loading submissions:', error);
-    }
-  };
-
-  const handleGradeSubmission = (submission) => {
-    setSelectedSubmission(submission);
-    setGradeForm({
-      pointsEarned: submission.pointsEarned || '',
-      feedback: submission.feedback || ''
-    });
-    setOpenGradeDialog(true);
-  };
-
-  const handleSubmitGrade = async (e) => {
-    e.preventDefault();
-    try {
-      await lecturerService.gradeSubmission(selectedSubmission.id, gradeForm);
-      setOpenGradeDialog(false);
+      setTableLoading(true);
+      await lecturerService.gradeSubmission(selectedSubmission.id, values);
+      message.success('Grade submitted successfully');
+      setGradeModalVisible(false);
+      gradeForm.resetFields();
       setSelectedSubmission(null);
-      setGradeForm({
-        pointsEarned: '',
-        feedback: ''
-      });
-      
-      // Refresh submissions
-      if (submissions.length > 0) {
-        const assignmentId = submissions[0].assignmentId;
-        const submissionsData = await lecturerService.getSubmissions(assignmentId);
-        setSubmissions(submissionsData);
-      }
+      await loadDashboardData();
     } catch (error) {
-      console.error('Error grading submission:', error);
+      console.error('Error submitting grade:', error);
+      message.error('Failed to submit grade');
+    } finally {
+      setTableLoading(false);
     }
   };
 
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
+  const handleDeleteAssignment = async (assignmentId) => {
+    try {
+      setTableLoading(true);
+      await lecturerService.deleteAssignment(assignmentId);
+      message.success('Assignment deleted successfully');
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error deleting assignment:', error);
+      message.error('Failed to delete assignment');
+    } finally {
+      setTableLoading(false);
+    }
   };
 
-  if (loading) {
-    return <Typography>Loading...</Typography>;
-  }
+  const openAssignmentModal = (assignment = null) => {
+    setSelectedAssignment(assignment);
+    if (assignment) {
+      assignmentForm.setFieldsValue({
+        ...assignment,
+        dueDate: dayjs(assignment.dueDate)
+      });
+    } else {
+      assignmentForm.resetFields();
+    }
+    setAssignmentModalVisible(true);
+  };
+
+  const openGradeModal = (submission) => {
+    setSelectedSubmission(submission);
+    gradeForm.setFieldsValue({
+      grade: submission.grade,
+      feedback: submission.feedback
+    });
+    setGradeModalVisible(true);
+  };
+
+  const getSubmissionStatus = (submission) => {
+    if (submission.grade !== null && submission.grade !== undefined) {
+      return { status: 'Graded', color: 'green' };
+    }
+    if (submission.submittedAt) {
+      return { status: 'Submitted', color: 'blue' };
+    }
+    return { status: 'Not Submitted', color: 'red' };
+  };
+
+  // Table columns
+  const courseColumns = [
+    {
+      title: 'Course Code',
+      dataIndex: 'courseCode',
+      key: 'courseCode',
+    },
+    {
+      title: 'Course Title',
+      dataIndex: 'title',
+      key: 'title',
+    },
+    {
+      title: 'Credits',
+      dataIndex: 'credits',
+      key: 'credits',
+      render: (credits) => <Tag color="blue">{credits}</Tag>,
+    },
+    {
+      title: 'Enrolled Students',
+      dataIndex: 'enrolledCount',
+      key: 'enrolledCount',
+      render: (count) => count || 0,
+    },
+    {
+      title: 'Capacity',
+      dataIndex: 'capacity',
+      key: 'capacity',
+    },
+    {
+      title: 'Schedule',
+      dataIndex: 'schedule',
+      key: 'schedule',
+      render: (schedule) => schedule || 'TBA',
+    },
+  ];
+
+  const assignmentColumns = [
+    {
+      title: 'Assignment Title',
+      dataIndex: 'title',
+      key: 'title',
+    },
+    {
+      title: 'Course',
+      dataIndex: 'courseName',
+      key: 'courseName',
+    },
+    {
+      title: 'Due Date',
+      dataIndex: 'dueDate',
+      key: 'dueDate',
+      render: (date) => new Date(date).toLocaleDateString(),
+    },
+    {
+      title: 'Total Points',
+      dataIndex: 'totalPoints',
+      key: 'totalPoints',
+      render: (points) => points || 100,
+    },
+    {
+      title: 'Submissions',
+      dataIndex: 'submissionCount',
+      key: 'submissionCount',
+      render: (count, record) => (
+        <Badge count={count || 0} showZero>
+          <Tag>{count || 0} / {record.enrolledCount || 0}</Tag>
+        </Badge>
+      ),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => openAssignmentModal(record)}
+          >
+            Edit
+          </Button>
+          <Popconfirm
+            title="Are you sure you want to delete this assignment?"
+            onConfirm={() => handleDeleteAssignment(record.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button
+              type="link"
+              danger
+              icon={<DeleteOutlined />}
+            >
+              Delete
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  const submissionColumns = [
+    {
+      title: 'Student',
+      dataIndex: 'studentName',
+      key: 'studentName',
+    },
+    {
+      title: 'Assignment',
+      dataIndex: 'assignmentTitle',
+      key: 'assignmentTitle',
+    },
+    {
+      title: 'Course',
+      dataIndex: 'courseName',
+      key: 'courseName',
+    },
+    {
+      title: 'Submitted',
+      dataIndex: 'submittedAt',
+      key: 'submittedAt',
+      render: (date) => date ? new Date(date).toLocaleDateString() : 'Not submitted',
+    },
+    {
+      title: 'Grade',
+      dataIndex: 'grade',
+      key: 'grade',
+      render: (grade) => grade !== null && grade !== undefined ? (
+        <Tag color="green">{grade}%</Tag>
+      ) : (
+        <Tag color="orange">Pending</Tag>
+      ),
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      render: (_, record) => {
+        const { status, color } = getSubmissionStatus(record);
+        return <Tag color={color}>{status}</Tag>;
+      },
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <Space>
+          {record.submittedAt && (
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => openGradeModal(record)}
+            >
+              Grade
+            </Button>
+          )}
+          {record.submissionFile && (
+            <Button
+              size="small"
+              icon={<DownloadOutlined />}
+              onClick={() => window.open(record.submissionFile, '_blank')}
+            >
+              Download
+            </Button>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
+  const studentColumns = [
+    {
+      title: 'Name',
+      key: 'name',
+      render: (_, record) => `${record.firstName || ''} ${record.lastName || ''}`,
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+    },
+    {
+      title: 'Student ID',
+      dataIndex: 'studentId',
+      key: 'studentId',
+    },
+    {
+      title: 'Enrolled Courses',
+      dataIndex: 'enrolledCourses',
+      key: 'enrolledCourses',
+      render: (courses) => courses?.length || 0,
+    },
+    {
+      title: 'Average Grade',
+      dataIndex: 'averageGrade',
+      key: 'averageGrade',
+      render: (grade) => grade ? `${grade}%` : 'N/A',
+    },
+  ];
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Lecturer Dashboard
-      </Typography>
+    <div>
+      <Title level={2} style={{ marginBottom: 24 }}>Lecturer Dashboard</Title>
+      
+      {/* Statistics Cards */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="My Courses"
+              value={dashboardData.totalCourses}
+              prefix={<BookOutlined />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Students"
+              value={dashboardData.totalStudents}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: '#52c41a' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Pending Grades"
+              value={dashboardData.pendingGrades}
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: '#fa8c16' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Upcoming Classes"
+              value={dashboardData.upcomingClasses}
+              prefix={<CalendarOutlined />}
+              valueStyle={{ color: '#722ed1' }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-      {/* Course Selection */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Select Course:
-        </Typography>
-        <Box display="flex" gap={2} flexWrap="wrap">
-          {courses.map((course) => (
-            <Button
-              key={course.id}
-              variant={selectedCourse?.id === course.id ? "contained" : "outlined"}
-              onClick={() => setSelectedCourse(course)}
-            >
-              {course.courseCode} - {course.title}
-            </Button>
-          ))}
-        </Box>
-      </Box>
+      {/* Main Content Tabs */}
+      <Card>
+        <Tabs defaultActiveKey="courses">
+          <TabPane tab="My Courses" key="courses">
+            <Table
+              columns={courseColumns}
+              dataSource={courses}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                pageSize: 10,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+              }}
+            />
+          </TabPane>
 
-      {selectedCourse && (
-        <>
-          {/* Statistics Cards */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom>
-                        Enrolled Students
-                      </Typography>
-                      <Typography variant="h4">
-                        {students.length}
-                      </Typography>
-                    </Box>
-                    <PeopleIcon color="primary" sx={{ fontSize: 40 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom>
-                        Total Assignments
-                      </Typography>
-                      <Typography variant="h4">
-                        {assignments.length}
-                      </Typography>
-                    </Box>
-                    <AssignmentIcon color="secondary" sx={{ fontSize: 40 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom>
-                        Pending Grades
-                      </Typography>
-                      <Typography variant="h4">
-                        {submissions.filter(s => !s.pointsEarned).length}
-                      </Typography>
-                    </Box>
-                    <GradeIcon color="warning" sx={{ fontSize: 40 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-
-          {/* Tabs */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={activeTab} onChange={handleTabChange}>
-              <Tab label="Students" />
-              <Tab label="Assignments" />
-              <Tab label="Grade Management" />
-              <Tab label="Submissions" />
-            </Tabs>
-          </Box>
-
-          {/* Students Tab */}
-          <TabPanel value={activeTab} index={0}>
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Student ID</TableCell>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Program</TableCell>
-                    <TableCell>Enrollment Date</TableCell>
-                    <TableCell>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {students.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell>{student.studentId}</TableCell>
-                      <TableCell>{student.firstName} {student.lastName}</TableCell>
-                      <TableCell>{student.email}</TableCell>
-                      <TableCell>{student.program}</TableCell>
-                      <TableCell>
-                        {new Date(student.enrollmentDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={student.status || 'ENROLLED'}
-                          color="success"
-                          size="small"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </TabPanel>
-
-          {/* Assignments Tab */}
-          <TabPanel value={activeTab} index={1}>
-            <Box sx={{ mb: 2 }}>
+          <TabPane tab="Assignments" key="assignments">
+            <div style={{ marginBottom: 16 }}>
               <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setOpenAssignmentDialog(true)}
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => openAssignmentModal()}
               >
                 Create Assignment
               </Button>
-            </Box>
-            
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Title</TableCell>
-                    <TableCell>Due Date</TableCell>
-                    <TableCell>Max Points</TableCell>
-                    <TableCell>Submissions</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {assignments.map((assignment) => (
-                    <TableRow key={assignment.id}>
-                      <TableCell>{assignment.title}</TableCell>
-                      <TableCell>
-                        {new Date(assignment.dueDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{assignment.maxPoints}</TableCell>
-                      <TableCell>{assignment.submissionCount || 0}</TableCell>
-                      <TableCell>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleViewSubmissions(assignment)}
-                          title="View Submissions"
-                        >
-                          <ViewIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          title="Edit Assignment"
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </TabPanel>
-
-          {/* Grade Management Tab */}
-          <TabPanel value={activeTab} index={2}>
-            <Typography variant="h6" gutterBottom>
-              Final Grades for {selectedCourse.title}
-            </Typography>
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Student</TableCell>
-                    <TableCell>Assignment Avg</TableCell>
-                    <TableCell>Final Grade</TableCell>
-                    <TableCell>Letter Grade</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {students.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell>{student.firstName} {student.lastName}</TableCell>
-                      <TableCell>{student.assignmentAverage || '-'}</TableCell>
-                      <TableCell>{student.finalGrade || '-'}</TableCell>
-                      <TableCell>{student.letterGrade || '-'}</TableCell>
-                      <TableCell>
-                        <Button size="small" variant="outlined">
-                          Set Grade
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </TabPanel>
-
-          {/* Submissions Tab */}
-          <TabPanel value={activeTab} index={3}>
-            <Typography variant="h6" gutterBottom>
-              Assignment Submissions
-            </Typography>
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Student</TableCell>
-                    <TableCell>Submission Date</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Points Earned</TableCell>
-                    <TableCell>Max Points</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {submissions.map((submission) => (
-                    <TableRow key={submission.id}>
-                      <TableCell>
-                        {submission.student?.firstName} {submission.student?.lastName}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(submission.submittedAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={submission.status}
-                          color={submission.status === 'GRADED' ? 'success' : 'warning'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{submission.pointsEarned || '-'}</TableCell>
-                      <TableCell>{submission.assignment?.maxPoints}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleGradeSubmission(submission)}
-                        >
-                          {submission.pointsEarned ? 'Edit Grade' : 'Grade'}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </TabPanel>
-        </>
-      )}
-
-      {/* Assignment Dialog */}
-      <Dialog open={openAssignmentDialog} onClose={() => setOpenAssignmentDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create New Assignment</DialogTitle>
-        <form onSubmit={handleCreateAssignment}>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Assignment Title"
-              fullWidth
-              variant="outlined"
-              value={assignmentForm.title}
-              onChange={(e) => setAssignmentForm({...assignmentForm, title: e.target.value})}
-              required
-            />
-            <TextField
-              margin="dense"
-              label="Description"
-              fullWidth
-              multiline
-              rows={4}
-              variant="outlined"
-              value={assignmentForm.description}
-              onChange={(e) => setAssignmentForm({...assignmentForm, description: e.target.value})}
-            />
-            <TextField
-              margin="dense"
-              label="Due Date"
-              type="datetime-local"
-              fullWidth
-              variant="outlined"
-              value={assignmentForm.dueDate}
-              onChange={(e) => setAssignmentForm({...assignmentForm, dueDate: e.target.value})}
-              required
-              InputLabelProps={{
-                shrink: true,
+            </div>
+            <Table
+              columns={assignmentColumns}
+              dataSource={assignments}
+              rowKey="id"
+              loading={loading || tableLoading}
+              pagination={{
+                pageSize: 10,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
               }}
             />
-            <TextField
-              margin="dense"
-              label="Maximum Points"
-              type="number"
-              fullWidth
-              variant="outlined"
-              value={assignmentForm.maxPoints}
-              onChange={(e) => setAssignmentForm({...assignmentForm, maxPoints: parseInt(e.target.value)})}
-              required
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenAssignmentDialog(false)}>Cancel</Button>
-            <Button type="submit" variant="contained">Create</Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+          </TabPane>
 
-      {/* Grade Dialog */}
-      <Dialog open={openGradeDialog} onClose={() => setOpenGradeDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Grade Submission</DialogTitle>
-        <form onSubmit={handleSubmitGrade}>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Points Earned"
-              type="number"
-              fullWidth
-              variant="outlined"
-              value={gradeForm.pointsEarned}
-              onChange={(e) => setGradeForm({...gradeForm, pointsEarned: e.target.value})}
-              required
+          <TabPane tab="Submissions & Grading" key="submissions">
+            <Table
+              columns={submissionColumns}
+              dataSource={submissions}
+              rowKey="id"
+              loading={loading || tableLoading}
+              pagination={{
+                pageSize: 10,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+              }}
             />
-            <TextField
-              margin="dense"
-              label="Feedback"
-              fullWidth
-              multiline
+          </TabPane>
+
+          <TabPane tab="My Students" key="students">
+            <Table
+              columns={studentColumns}
+              dataSource={students}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                pageSize: 10,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+              }}
+            />
+          </TabPane>
+        </Tabs>
+      </Card>
+
+      {/* Assignment Modal */}
+      <Modal
+        title={selectedAssignment ? 'Edit Assignment' : 'Create New Assignment'}
+        open={assignmentModalVisible}
+        onCancel={() => {
+          setAssignmentModalVisible(false);
+          setSelectedAssignment(null);
+          assignmentForm.resetFields();
+        }}
+        footer={null}
+        destroyOnClose
+        width={600}
+      >
+        <Form
+          form={assignmentForm}
+          layout="vertical"
+          onFinish={handleAssignmentSubmit}
+        >
+          <Form.Item
+            name="title"
+            label="Assignment Title"
+            rules={[{ required: true, message: 'Please enter assignment title' }]}
+          >
+            <Input placeholder="e.g., Midterm Project" />
+          </Form.Item>
+
+          <Form.Item
+            name="description"
+            label="Description"
+            rules={[{ required: true, message: 'Please enter assignment description' }]}
+          >
+            <TextArea rows={4} placeholder="Assignment description and requirements" />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="courseId"
+                label="Course"
+                rules={[{ required: true, message: 'Please select a course' }]}
+              >
+                <Select placeholder="Select course">
+                  {courses.map(course => (
+                    <Option key={course.id} value={course.id}>
+                      {course.courseCode} - {course.title}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="totalPoints"
+                label="Total Points"
+                rules={[{ required: true, message: 'Please enter total points' }]}
+              >
+                <InputNumber min={1} max={1000} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            name="dueDate"
+            label="Due Date"
+            rules={[{ required: true, message: 'Please select due date' }]}
+          >
+            <DatePicker
+              showTime
+              style={{ width: '100%' }}
+              format="YYYY-MM-DD HH:mm"
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={tableLoading}>
+                {selectedAssignment ? 'Update' : 'Create'}
+              </Button>
+              <Button onClick={() => {
+                setAssignmentModalVisible(false);
+                setSelectedAssignment(null);
+                assignmentForm.resetFields();
+              }}>
+                Cancel
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Grade Modal */}
+      <Modal
+        title={`Grade Submission - ${selectedSubmission?.studentName}`}
+        open={gradeModalVisible}
+        onCancel={() => {
+          setGradeModalVisible(false);
+          setSelectedSubmission(null);
+          gradeForm.resetFields();
+        }}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={gradeForm}
+          layout="vertical"
+          onFinish={handleGradeSubmit}
+        >
+          <Form.Item
+            name="grade"
+            label="Grade (%)"
+            rules={[{ required: true, message: 'Please enter a grade' }]}
+          >
+            <InputNumber
+              min={0}
+              max={100}
+              style={{ width: '100%' }}
+              placeholder="Enter grade (0-100)"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="feedback"
+            label="Feedback"
+          >
+            <TextArea
               rows={4}
-              variant="outlined"
-              value={gradeForm.feedback}
-              onChange={(e) => setGradeForm({...gradeForm, feedback: e.target.value})}
+              placeholder="Provide feedback to the student..."
             />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenGradeDialog(false)}>Cancel</Button>
-            <Button type="submit" variant="contained">Save Grade</Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-    </Box>
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={tableLoading}>
+                Submit Grade
+              </Button>
+              <Button onClick={() => {
+                setGradeModalVisible(false);
+                setSelectedSubmission(null);
+                gradeForm.resetFields();
+              }}>
+                Cancel
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   );
 };
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { Container, CircularProgress, Box } from '@mui/material';
+import { ConfigProvider, Spin } from 'antd';
 
 // Auth Components
 import Login from './components/auth/Login';
@@ -11,6 +11,13 @@ import Register from './components/auth/Register';
 import AdminDashboard from './components/admin/AdminDashboard';
 import LecturerDashboard from './components/lecturer/LecturerDashboard';
 import StudentDashboard from './components/student/StudentDashboard';
+
+// Admin Components
+import Students from './components/admin/Students';
+import Lecturers from './components/admin/Lecturers';
+import Degrees from './components/admin/Degrees';
+import Courses from './components/admin/Courses';
+import AddCourse from './components/admin/AddCourse';
 
 // Common Components
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -23,14 +30,25 @@ function App() {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
-      </Box>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <Spin size="large" />
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="xl" disableGutters>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#1890ff',
+        },
+      }}
+    >
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
@@ -48,6 +66,46 @@ function App() {
         } />
 
         {/* Admin Routes */}
+        <Route path="/admin/students" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <Layout>
+              <Students />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin/lecturers" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <Layout>
+              <Lecturers />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin/degrees" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <Layout>
+              <Degrees />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin/courses" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <Layout>
+              <Courses />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin/add-course" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <Layout>
+              <AddCourse />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
         <Route path="/admin/*" element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <Layout>
@@ -80,7 +138,7 @@ function App() {
         } />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-    </Container>
+    </ConfigProvider>
   );
 }
 

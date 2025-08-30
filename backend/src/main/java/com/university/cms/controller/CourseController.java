@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +71,73 @@ public class CourseController {
         }
     }
 
+    // Admin lecturer management endpoints
+    @GetMapping("/admin/lecturers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllLecturers() {
+        try {
+            List<Map<String, Object>> lecturers = courseService.getAllLecturers();
+            return ResponseEntity.ok(lecturers);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/admin/students")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllStudents() {
+        try {
+            List<Map<String, Object>> students = courseService.getAllStudents();
+            return ResponseEntity.ok(students);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/admin/students/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateStudent(@PathVariable Long id, @RequestBody Map<String, Object> studentData) {
+        try {
+            Map<String, Object> updatedStudent = courseService.updateStudent(id, studentData);
+            return ResponseEntity.ok(updatedStudent);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/admin/students/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateStudentStatus(@PathVariable Long id, @RequestBody Map<String, Object> statusData) {
+        try {
+            Boolean active = (Boolean) statusData.get("active");
+            Map<String, Object> updatedStudent = courseService.updateStudentStatus(id, active);
+            return ResponseEntity.ok(updatedStudent);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/admin/dashboard/stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getDashboardStats() {
+        try {
+            Map<String, Object> stats = courseService.getDashboardStats();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     // Lecturer endpoints
     @GetMapping("/lecturer/courses")
     @PreAuthorize("hasRole('LECTURER')")
@@ -110,6 +178,48 @@ public class CourseController {
             Map<String, String> response = new HashMap<>();
             response.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/admin/lecturers/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateLecturer(@PathVariable Long id, @RequestBody Map<String, Object> lecturerData) {
+        try {
+            Map<String, Object> updatedLecturer = courseService.updateLecturer(id, lecturerData);
+            return ResponseEntity.ok(updatedLecturer);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/admin/lecturers/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateLecturerStatus(@PathVariable Long id, @RequestBody Map<String, Object> statusData) {
+        try {
+            Boolean active = (Boolean) statusData.get("active");
+            Map<String, Object> updatedLecturer = courseService.updateLecturerStatus(id, active);
+            return ResponseEntity.ok(updatedLecturer);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // Test endpoint - remove after debugging
+    @GetMapping("/test/courses")
+    public ResponseEntity<List<Course>> getCoursesTest() {
+        System.out.println("DEBUG: Test endpoint /test/courses called");
+        try {
+            List<Course> courses = courseService.getAllCourses();
+            System.out.println("DEBUG: Test endpoint - courses retrieved: " + courses.size());
+            return ResponseEntity.ok(courses);
+        } catch (Exception e) {
+            System.out.println("DEBUG: Test endpoint error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(new ArrayList<>());
         }
     }
 }

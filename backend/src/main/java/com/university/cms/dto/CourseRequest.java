@@ -18,8 +18,16 @@ public class CourseRequest {
     @Positive(message = "Credits must be positive")
     private Integer credits;
     
-    @NotNull(message = "Lecturer ID is required")
+    // Make lecturerId optional
     private Long lecturerId;
+    
+    @NotNull(message = "Degree ID is required")
+    private Long degreeId;
+    
+    @NotBlank(message = "Department is required")  
+    private String department;
+    
+    private Integer capacity;
     
     public CourseRequest() {}
     
@@ -61,5 +69,29 @@ public class CourseRequest {
     
     public void setLecturerId(Long lecturerId) {
         this.lecturerId = lecturerId;
+    }
+    
+    public Long getDegreeId() {
+        return degreeId;
+    }
+    
+    public void setDegreeId(Long degreeId) {
+        this.degreeId = degreeId;
+    }
+    
+    public String getDepartment() {
+        return department;
+    }
+    
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+    
+    public Integer getCapacity() {
+        return capacity;
+    }
+    
+    public void setCapacity(Integer capacity) {
+        this.capacity = capacity;
     }
 }

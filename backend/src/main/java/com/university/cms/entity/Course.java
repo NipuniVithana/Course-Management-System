@@ -28,6 +28,13 @@ public class Course {
     private Integer capacity = 30;
     
     @ManyToOne
+    @JoinColumn(name = "degree_id")
+    private Degree degree;
+    
+    @Column(nullable = false)
+    private String department;
+    
+    @ManyToOne
     @JoinColumn(name = "lecturer_id")
     private Lecturer lecturer;
     
@@ -98,6 +105,22 @@ public class Course {
     
     public void setCapacity(Integer capacity) {
         this.capacity = capacity;
+    }
+    
+    public Degree getDegree() {
+        return degree;
+    }
+    
+    public void setDegree(Degree degree) {
+        this.degree = degree;
+    }
+    
+    public String getDepartment() {
+        return department;
+    }
+    
+    public void setDepartment(String department) {
+        this.department = department;
     }
     
     public Lecturer getLecturer() {

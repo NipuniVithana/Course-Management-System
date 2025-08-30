@@ -1,10 +1,14 @@
 package com.university.cms.service;
 
 import com.university.cms.entity.Admin;
+import com.university.cms.entity.Course;
+import com.university.cms.entity.Degree;
 import com.university.cms.entity.Lecturer;
 import com.university.cms.entity.Student;
 import com.university.cms.entity.User;
 import com.university.cms.repository.AdminRepository;
+import com.university.cms.repository.CourseRepository;
+import com.university.cms.repository.DegreeRepository;
 import com.university.cms.repository.LecturerRepository;
 import com.university.cms.repository.StudentRepository;
 import com.university.cms.repository.UserRepository;
@@ -31,11 +35,19 @@ public class DataInitializationService implements CommandLineRunner {
     private StudentRepository studentRepository;
 
     @Autowired
+    private CourseRepository courseRepository;
+
+    @Autowired
+    private DegreeRepository degreeRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
         initializeUsers();
+        initializeDegrees();
+        initializeCourses();
     }
 
     private void initializeUsers() {
@@ -110,6 +122,94 @@ public class DataInitializationService implements CommandLineRunner {
             studentRepository.save(student);
 
             System.out.println("Demo student created: student@university.edu / student123");
+        }
+    }
+
+    private void initializeDegrees() {
+        // Create default degrees if not exists
+        if (degreeRepository.findByName("Bachelor of Science in Computer Science").isEmpty()) {
+            Degree degree = new Degree();
+            degree.setName("Bachelor of Science in Computer Science");
+            degree.setDepartment("Computer Science");
+            degree.setFaculty("Faculty of Engineering");
+            degree.setDuration(4);
+            degree.setDescription("Four-year undergraduate program in Computer Science covering programming, algorithms, data structures, and software engineering.");
+            degreeRepository.save(degree);
+            System.out.println("Default degree created: Bachelor of Science in Computer Science");
+        }
+
+        if (degreeRepository.findByName("Master of Science in Computer Science").isEmpty()) {
+            Degree degree = new Degree();
+            degree.setName("Master of Science in Computer Science");
+            degree.setDepartment("Computer Science");
+            degree.setFaculty("Faculty of Engineering");
+            degree.setDuration(2);
+            degree.setDescription("Two-year graduate program in Computer Science with focus on advanced topics and research.");
+            degreeRepository.save(degree);
+            System.out.println("Default degree created: Master of Science in Computer Science");
+        }
+
+        if (degreeRepository.findByName("Bachelor of Arts in Mathematics").isEmpty()) {
+            Degree degree = new Degree();
+            degree.setName("Bachelor of Arts in Mathematics");
+            degree.setDepartment("Mathematics");
+            degree.setFaculty("Faculty of Science");
+            degree.setDuration(4);
+            degree.setDescription("Four-year undergraduate program in Mathematics covering calculus, algebra, statistics, and mathematical analysis.");
+            degreeRepository.save(degree);
+            System.out.println("Default degree created: Bachelor of Arts in Mathematics");
+        }
+    }
+
+    private void initializeCourses() {
+        // Get the default degree
+        Degree csDegree = degreeRepository.findByName("Bachelor of Science in Computer Science")
+                .orElseThrow(() -> new RuntimeException("CS Degree not found"));
+
+        // Create default courses if not exists
+        if (courseRepository.findByCourseCode("CS101").isEmpty()) {
+            Course course = new Course();
+            course.setCourseCode("CS101");
+            course.setTitle("Introduction to Computer Science");
+            course.setDescription("Basic concepts of computer science and programming.");
+            course.setCredits(3);
+            course.setDegree(csDegree);
+            course.setDepartment("Computer Science");
+            course.setCreatedAt(LocalDateTime.now());
+            course.setUpdatedAt(LocalDateTime.now());
+            courseRepository.save(course);
+
+            System.out.println("Default course created: CS101 - Introduction to Computer Science");
+        }
+
+        if (courseRepository.findByCourseCode("CS102").isEmpty()) {
+            Course course = new Course();
+            course.setCourseCode("CS102");
+            course.setTitle("Data Structures");
+            course.setDescription("Introduction to data structures and algorithms.");
+            course.setCredits(3);
+            course.setDegree(csDegree);
+            course.setDepartment("Computer Science");
+            course.setCreatedAt(LocalDateTime.now());
+            course.setUpdatedAt(LocalDateTime.now());
+            courseRepository.save(course);
+
+            System.out.println("Default course created: CS102 - Data Structures");
+        }
+
+        if (courseRepository.findByCourseCode("CS103").isEmpty()) {
+            Course course = new Course();
+            course.setCourseCode("CS103");
+            course.setTitle("Database Systems");
+            course.setDescription("Fundamentals of database systems and SQL.");
+            course.setCredits(3);
+            course.setDegree(csDegree);
+            course.setDepartment("Computer Science");
+            course.setCreatedAt(LocalDateTime.now());
+            course.setUpdatedAt(LocalDateTime.now());
+            courseRepository.save(course);
+
+            System.out.println("Default course created: CS103 - Database Systems");
         }
     }
 }

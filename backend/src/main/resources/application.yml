@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    active: dev
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
@@ -26,6 +28,11 @@ spring:
 jwt:
   secret: mySecretKey123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
   expiration: 86400000 # 24 hours
+
+# Application Configuration
+app:
+  name: Course Management System
+  url: http://localhost:3001
 
 # CORS Configuration
 cors:

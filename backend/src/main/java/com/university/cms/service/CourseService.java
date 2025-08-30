@@ -2,15 +2,24 @@ package com.university.cms.service;
 
 import com.university.cms.dto.CourseRequest;
 import com.university.cms.entity.Course;
+import com.university.cms.entity.Degree;
 import com.university.cms.entity.Lecturer;
+import com.university.cms.entity.Student;
+import com.university.cms.entity.User;
 import com.university.cms.repository.CourseRepository;
 import com.university.cms.repository.LecturerRepository;
+import com.university.cms.repository.StudentRepository;
+import com.university.cms.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -21,9 +30,26 @@ public class CourseService {
 
     @Autowired
     private LecturerRepository lecturerRepository;
+    
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private DegreeService degreeService;
 
     public List<Course> getAllCourses() {
-        return courseRepository.findAll();
+        List<Course> courses = courseRepository.findAll();
+        System.out.println("DEBUG: getAllCourses returning " + courses.size() + " courses");
+        for (Course course : courses) {
+            System.out.println("DEBUG: Course - ID: " + course.getId() + 
+                ", Title: " + course.getTitle() + 
+                ", Code: " + course.getCourseCode() + 
+                ", Credits: " + course.getCredits());
+        }
+        return courses;
     }
 
     public Course getCourseById(Long id) {
@@ -32,10 +58,6 @@ public class CourseService {
     }
 
     public Course createCourse(CourseRequest courseRequest) {
-        // Check if lecturer exists
-        Lecturer lecturer = lecturerRepository.findById(courseRequest.getLecturerId())
-                .orElseThrow(() -> new RuntimeException("Lecturer not found with id: " + courseRequest.getLecturerId()));
-
         // Check if course code already exists
         if (courseRepository.findByCourseCode(courseRequest.getCourseCode()).isPresent()) {
             throw new RuntimeException("Course with code " + courseRequest.getCourseCode() + " already exists");
@@ -46,20 +68,50 @@ public class CourseService {
         course.setTitle(courseRequest.getCourseName());
         course.setDescription(courseRequest.getDescription());
         course.setCredits(courseRequest.getCredits());
-        course.setLecturer(lecturer);
+        
+        // Set degree using degreeId
+        if (courseRequest.getDegreeId() != null) {
+            Degree degree = degreeService.getDegreeById(courseRequest.getDegreeId())
+                    .orElseThrow(() -> new RuntimeException("Degree not found with id: " + courseRequest.getDegreeId()));
+            course.setDegree(degree);
+        }
+        
+        course.setDepartment(courseRequest.getDepartment());
+        
+        // Set capacity if provided, otherwise use default
+        if (courseRequest.getCapacity() != null) {
+            course.setCapacity(courseRequest.getCapacity());
+        }
+        
+        // Set lecturer if provided (optional)
+        if (courseRequest.getLecturerId() != null) {
+            Lecturer lecturer = lecturerRepository.findById(courseRequest.getLecturerId())
+                    .orElseThrow(() -> new RuntimeException("Lecturer not found with id: " + courseRequest.getLecturerId()));
+            course.setLecturer(lecturer);
+        }
+        
         course.setUpdatedAt(LocalDateTime.now());
-
         return courseRepository.save(course);
     }
 
     public Course updateCourse(Long id, CourseRequest courseRequest) {
         Course course = getCourseById(id);
 
-        // Check if lecturer exists if lecturer is being changed
-        if (!course.getLecturer().getId().equals(courseRequest.getLecturerId())) {
-            Lecturer lecturer = lecturerRepository.findById(courseRequest.getLecturerId())
-                    .orElseThrow(() -> new RuntimeException("Lecturer not found with id: " + courseRequest.getLecturerId()));
-            course.setLecturer(lecturer);
+        // Handle lecturer assignment/update with null checks
+        Long currentLecturerId = course.getLecturer() != null ? course.getLecturer().getId() : null;
+        Long newLecturerId = courseRequest.getLecturerId();
+        
+        // Check if lecturer needs to be updated
+        if (!Objects.equals(currentLecturerId, newLecturerId)) {
+            if (newLecturerId != null) {
+                // Assign new lecturer
+                Lecturer lecturer = lecturerRepository.findById(newLecturerId)
+                        .orElseThrow(() -> new RuntimeException("Lecturer not found with id: " + newLecturerId));
+                course.setLecturer(lecturer);
+            } else {
+                // Remove lecturer assignment
+                course.setLecturer(null);
+            }
         }
 
         course.setCourseCode(courseRequest.getCourseCode());
@@ -78,5 +130,209 @@ public class CourseService {
 
     public List<Course> getCoursesByLecturer(Long lecturerId) {
         return courseRepository.findByLecturerId(lecturerId);
+    }
+
+    // Admin methods for lecturer management
+    public List<Map<String, Object>> getAllLecturers() {
+        List<Lecturer> lecturers = lecturerRepository.findAll();
+        return lecturers.stream().map(lecturer -> {
+            Map<String, Object> lecturerMap = new HashMap<>();
+            lecturerMap.put("id", lecturer.getId());
+            lecturerMap.put("firstName", lecturer.getFirstName());
+            lecturerMap.put("lastName", lecturer.getLastName());
+            lecturerMap.put("email", lecturer.getUser().getEmail());
+            lecturerMap.put("phoneNumber", lecturer.getPhone());
+            lecturerMap.put("department", lecturer.getDepartment());
+            lecturerMap.put("officeLocation", lecturer.getOfficeLocation());
+            lecturerMap.put("employeeId", lecturer.getEmployeeId());
+            lecturerMap.put("active", lecturer.getUser().getStatus() == User.Status.ACTIVE);
+            return lecturerMap;
+        }).collect(Collectors.toList());
+    }
+
+    public Map<String, Object> updateLecturer(Long id, Map<String, Object> lecturerData) {
+        try {
+            Lecturer lecturer = lecturerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found with id: " + id));
+            
+            // Update lecturer information
+            lecturer.setFirstName((String) lecturerData.get("firstName"));
+            lecturer.setLastName((String) lecturerData.get("lastName"));
+            lecturer.setDepartment((String) lecturerData.get("department"));
+            lecturer.setPhone((String) lecturerData.get("phoneNumber"));
+            lecturer.setOfficeLocation((String) lecturerData.get("officeLocation"));
+            lecturer.setUpdatedAt(LocalDateTime.now());
+            
+            // Update user email if provided
+            if (lecturerData.get("email") != null) {
+                String newEmail = (String) lecturerData.get("email");
+                if (!lecturer.getUser().getEmail().equals(newEmail)) {
+                    // Check if new email already exists
+                    if (userRepository.findByEmail(newEmail).isPresent()) {
+                        throw new RuntimeException("Email already exists: " + newEmail);
+                    }
+                    lecturer.getUser().setEmail(newEmail);
+                    lecturer.getUser().setUpdatedAt(LocalDateTime.now());
+                }
+            }
+            
+            Lecturer savedLecturer = lecturerRepository.save(lecturer);
+            
+            // Return updated lecturer data
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", savedLecturer.getId());
+            result.put("firstName", savedLecturer.getFirstName());
+            result.put("lastName", savedLecturer.getLastName());
+            result.put("email", savedLecturer.getUser().getEmail());
+            result.put("phoneNumber", savedLecturer.getPhone());
+            result.put("department", savedLecturer.getDepartment());
+            result.put("officeLocation", savedLecturer.getOfficeLocation());
+            result.put("employeeId", savedLecturer.getEmployeeId());
+            result.put("active", savedLecturer.getUser().getStatus() == User.Status.ACTIVE);
+            
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update lecturer: " + e.getMessage());
+        }
+    }
+
+    public Map<String, Object> updateLecturerStatus(Long id, Boolean active) {
+        try {
+            Lecturer lecturer = lecturerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found with id: " + id));
+            
+            // Update user status
+            lecturer.getUser().setStatus(active ? User.Status.ACTIVE : User.Status.INACTIVE);
+            lecturer.getUser().setUpdatedAt(LocalDateTime.now());
+            lecturer.setUpdatedAt(LocalDateTime.now());
+            
+            Lecturer savedLecturer = lecturerRepository.save(lecturer);
+            
+            // Return updated lecturer data
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", savedLecturer.getId());
+            result.put("firstName", savedLecturer.getFirstName());
+            result.put("lastName", savedLecturer.getLastName());
+            result.put("email", savedLecturer.getUser().getEmail());
+            result.put("phoneNumber", savedLecturer.getPhone());
+            result.put("department", savedLecturer.getDepartment());
+            result.put("officeLocation", savedLecturer.getOfficeLocation());
+            result.put("employeeId", savedLecturer.getEmployeeId());
+            result.put("active", savedLecturer.getUser().getStatus() == User.Status.ACTIVE);
+            
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update lecturer status: " + e.getMessage());
+        }
+    }
+
+    public Map<String, Object> updateStudent(Long id, Map<String, Object> studentData) {
+        try {
+            Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Student not found with id: " + id));
+            
+            // Update student information
+            student.setFirstName((String) studentData.get("firstName"));
+            student.setLastName((String) studentData.get("lastName"));
+            student.setPhone((String) studentData.get("phoneNumber"));
+            student.setStudentId((String) studentData.get("studentId"));
+            student.setProgram((String) studentData.get("program"));
+            student.setAddress((String) studentData.get("address"));
+            
+            if (studentData.get("yearOfStudy") != null) {
+                student.setYearOfStudy(Integer.valueOf(studentData.get("yearOfStudy").toString()));
+            }
+            
+            student.setUpdatedAt(LocalDateTime.now());
+            
+            // Update user email if provided
+            if (studentData.get("email") != null) {
+                String newEmail = (String) studentData.get("email");
+                if (!student.getUser().getEmail().equals(newEmail)) {
+                    // Check if new email already exists
+                    if (userRepository.findByEmail(newEmail).isPresent()) {
+                        throw new RuntimeException("Email already exists: " + newEmail);
+                    }
+                    student.getUser().setEmail(newEmail);
+                    student.getUser().setUpdatedAt(LocalDateTime.now());
+                }
+            }
+            
+            Student savedStudent = studentRepository.save(student);
+            
+            // Return updated student data
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", savedStudent.getId());
+            result.put("firstName", savedStudent.getFirstName());
+            result.put("lastName", savedStudent.getLastName());
+            result.put("email", savedStudent.getUser().getEmail());
+            result.put("phoneNumber", savedStudent.getPhone());
+            result.put("studentId", savedStudent.getStudentId());
+            result.put("program", savedStudent.getProgram());
+            result.put("address", savedStudent.getAddress());
+            result.put("yearOfStudy", savedStudent.getYearOfStudy());
+            result.put("active", savedStudent.getUser().getStatus() == User.Status.ACTIVE);
+            
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update student: " + e.getMessage());
+        }
+    }
+
+    public Map<String, Object> updateStudentStatus(Long id, Boolean active) {
+        try {
+            Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Student not found with id: " + id));
+            
+            // Update user status
+            student.getUser().setStatus(active ? User.Status.ACTIVE : User.Status.INACTIVE);
+            student.getUser().setUpdatedAt(LocalDateTime.now());
+            student.setUpdatedAt(LocalDateTime.now());
+            
+            Student savedStudent = studentRepository.save(student);
+            
+            // Return updated student data
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", savedStudent.getId());
+            result.put("firstName", savedStudent.getFirstName());
+            result.put("lastName", savedStudent.getLastName());
+            result.put("email", savedStudent.getUser().getEmail());
+            result.put("phoneNumber", savedStudent.getPhone());
+            result.put("studentId", savedStudent.getStudentId());
+            result.put("program", savedStudent.getProgram());
+            result.put("address", savedStudent.getAddress());
+            result.put("yearOfStudy", savedStudent.getYearOfStudy());
+            result.put("active", savedStudent.getUser().getStatus() == User.Status.ACTIVE);
+            
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update student status: " + e.getMessage());
+        }
+    }
+
+    public List<Map<String, Object>> getAllStudents() {
+        List<Student> students = studentRepository.findAll();
+        return students.stream().map(student -> {
+            Map<String, Object> studentMap = new HashMap<>();
+            studentMap.put("id", student.getId());
+            studentMap.put("firstName", student.getFirstName());
+            studentMap.put("lastName", student.getLastName());
+            studentMap.put("email", student.getUser().getEmail());
+            studentMap.put("phoneNumber", student.getPhone());
+            studentMap.put("studentId", student.getStudentId());
+            studentMap.put("yearOfStudy", student.getYearOfStudy());
+            studentMap.put("major", student.getProgram());
+            studentMap.put("active", student.getUser().getStatus() == User.Status.ACTIVE);
+            return studentMap;
+        }).collect(Collectors.toList());
+    }
+
+    public Map<String, Object> getDashboardStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalCourses", courseRepository.count());
+        stats.put("totalLecturers", lecturerRepository.count());
+        stats.put("totalStudents", studentRepository.count());
+        stats.put("totalDegrees", degreeService.getAllDegrees().size());
+        return stats;
     }
 }

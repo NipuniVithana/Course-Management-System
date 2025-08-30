@@ -1,119 +1,37 @@
 import React, { useState } from 'react';
 import {
-  Container,
-  Paper,
-  TextField,
+  Form,
+  Input,
   Button,
   Typography,
-  Box,
+  Card,
   Alert,
-  CircularProgress,
-  Link,
-  FormControl,
-  InputLabel,
   Select,
-  MenuItem
-} from '@mui/material';
+  Row,
+  Col
+} from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined, IdcardOutlined } from '@ant-design/icons';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
+const { Title, Text, Link } = Typography;
+const { Option } = Select;
+
 const Register = () => {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'STUDENT',
-    phone: '',
-    studentId: '',
-    program: ''
-  });
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({});
   
   const { register, error, clearError } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear validation errors
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-    
-    if (error) clearError();
-  };
-
-  const validateForm = () => {
-    const errors = {};
-    
-    if (!formData.firstName.trim()) {
-      errors.firstName = 'First name is required';
-    }
-    
-    if (!formData.lastName.trim()) {
-      errors.lastName = 'Last name is required';
-    }
-    
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Email is invalid';
-    }
-    
-    if (!formData.password) {
-      errors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-    
-    if (formData.role === 'STUDENT') {
-      if (!formData.program.trim()) {
-        errors.program = 'Program is required for students';
-      }
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
+  const handleSubmit = async (values) => {
     setLoading(true);
     
     try {
-      const userData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        phone: formData.phone,
-        ...(formData.role === 'STUDENT' && {
-          program: formData.program
-        })
-      };
-      
-      await register(userData);
-      navigate('/dashboard');
+      console.log('Attempting registration with:', values);
+      const result = await register(values);
+      console.log('Registration successful:', result);
+      navigate('/login');
     } catch (err) {
       console.error('Registration error:', err);
     } finally {
@@ -121,172 +39,260 @@ const Register = () => {
     }
   };
 
+  const handleFormChange = () => {
+    if (error) clearError();
+  };
+
   return (
-    <Container component="main" maxWidth="sm">
-      <Box
-        sx={{
-          marginTop: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Course Management System
-          </Typography>
-          <Typography component="h2" variant="h5" align="center" gutterBottom>
-            Sign Up
-          </Typography>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#ffffff',
+      padding: '20px'
+    }}>
+      <Row justify="center" style={{ width: '100%' }}>
+        <Col xs={24} sm={20} md={16} lg={12} xl={10}>
+          <Card
+            style={{
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              borderRadius: '12px',
+              border: 'none'
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <Title level={2} style={{ color: '#1890ff', marginBottom: '8px' }}>
+                Course Management System
+              </Title>
+              <Title level={4} style={{ color: '#666', fontWeight: 400 }}>
+                Create Your Account
+              </Title>
+            </div>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="firstName"
-                label="First Name"
-                name="firstName"
-                autoComplete="given-name"
-                autoFocus
-                value={formData.firstName}
-                onChange={handleChange}
-                disabled={loading}
-                error={!!validationErrors.firstName}
-                helperText={validationErrors.firstName}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="lastName"
-                label="Last Name"
-                name="lastName"
-                autoComplete="family-name"
-                value={formData.lastName}
-                onChange={handleChange}
-                disabled={loading}
-                error={!!validationErrors.lastName}
-                helperText={validationErrors.lastName}
-              />
-            </Box>
-
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              value={formData.email}
-              onChange={handleChange}
-              disabled={loading}
-              error={!!validationErrors.email}
-              helperText={validationErrors.email}
-            />
-
-            <TextField
-              margin="normal"
-              fullWidth
-              id="phone"
-              label="Phone Number"
-              name="phone"
-              autoComplete="tel"
-              value={formData.phone}
-              onChange={handleChange}
-              disabled={loading}
-            />
-
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="role-label">Role</InputLabel>
-              <Select
-                labelId="role-label"
-                id="role"
-                name="role"
-                value={formData.role}
-                label="Role"
-                onChange={handleChange}
-                disabled={loading}
-              >
-                <MenuItem value="STUDENT">Student</MenuItem>
-                <MenuItem value="LECTURER">Lecturer</MenuItem>
-              </Select>
-            </FormControl>
-
-            {formData.role === 'STUDENT' && (
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="program"
-                label="Program/Major"
-                name="program"
-                value={formData.program}
-                onChange={handleChange}
-                disabled={loading}
-                error={!!validationErrors.program}
-                helperText={validationErrors.program}
+            {error && (
+              <Alert
+                message={error}
+                type="error"
+                style={{ marginBottom: '24px' }}
+                closable
+                onClose={clearError}
               />
             )}
 
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="new-password"
-              value={formData.password}
-              onChange={handleChange}
-              disabled={loading}
-              error={!!validationErrors.password}
-              helperText={validationErrors.password}
-            />
-
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="confirmPassword"
-              label="Confirm Password"
-              type="password"
-              id="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              disabled={loading}
-              error={!!validationErrors.confirmPassword}
-              helperText={validationErrors.confirmPassword}
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+            <Form
+              form={form}
+              name="register"
+              onFinish={handleSubmit}
+              onValuesChange={handleFormChange}
+              layout="vertical"
+              requiredMark={false}
             >
-              {loading ? <CircularProgress size={24} /> : 'Sign Up'}
-            </Button>
-            
-            <Box textAlign="center">
-              <Link component={RouterLink} to="/login" variant="body2">
-                Already have an account? Sign In
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="firstName"
+                    label="First Name"
+                    rules={[{ required: true, message: 'Please input your first name!' }]}
+                  >
+                    <Input
+                      prefix={<UserOutlined />}
+                      placeholder="First name"
+                      size="large"
+                      disabled={loading}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="lastName"
+                    label="Last Name"
+                    rules={[{ required: true, message: 'Please input your last name!' }]}
+                  >
+                    <Input
+                      prefix={<UserOutlined />}
+                      placeholder="Last name"
+                      size="large"
+                      disabled={loading}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="email"
+                label="Email Address"
+                rules={[
+                  { required: true, message: 'Please input your email!' },
+                  { type: 'email', message: 'Please enter a valid email!' }
+                ]}
+              >
+                <Input
+                  prefix={<MailOutlined />}
+                  placeholder="Enter your email"
+                  size="large"
+                  disabled={loading}
+                />
+              </Form.Item>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="password"
+                    label="Password"
+                    rules={[
+                      { required: true, message: 'Please input your password!' },
+                      { min: 6, message: 'Password must be at least 6 characters!' }
+                    ]}
+                  >
+                    <Input.Password
+                      prefix={<LockOutlined />}
+                      placeholder="Enter password"
+                      size="large"
+                      disabled={loading}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="confirmPassword"
+                    label="Confirm Password"
+                    dependencies={['password']}
+                    rules={[
+                      { required: true, message: 'Please confirm your password!' },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value || getFieldValue('password') === value) {
+                            return Promise.resolve();
+                          }
+                          return Promise.reject(new Error('Passwords do not match!'));
+                        },
+                      }),
+                    ]}
+                  >
+                    <Input.Password
+                      prefix={<LockOutlined />}
+                      placeholder="Confirm password"
+                      size="large"
+                      disabled={loading}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="role"
+                label="Role"
+                initialValue="STUDENT"
+                rules={[{ required: true, message: 'Please select your role!' }]}
+              >
+                <Select size="large" disabled={loading}>
+                  <Option value="STUDENT">Student</Option>
+                  <Option value="LECTURER">Lecturer</Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                name="phone"
+                label="Phone Number"
+              >
+                <Input
+                  prefix={<PhoneOutlined />}
+                  placeholder="Phone number (optional)"
+                  size="large"
+                  disabled={loading}
+                />
+              </Form.Item>
+
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) => prevValues.role !== currentValues.role}
+              >
+                {({ getFieldValue }) => {
+                  const role = getFieldValue('role');
+                  return role === 'STUDENT' ? (
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item
+                          name="studentId"
+                          label="Student ID"
+                        >
+                          <Input
+                            prefix={<IdcardOutlined />}
+                            placeholder="Student ID (optional)"
+                            size="large"
+                            disabled={loading}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          name="program"
+                          label="Program"
+                        >
+                          <Input
+                            placeholder="Program (optional)"
+                            size="large"
+                            disabled={loading}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  ) : role === 'LECTURER' ? (
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item
+                          name="department"
+                          label="Department"
+                        >
+                          <Input
+                            placeholder="Department (optional)"
+                            size="large"
+                            disabled={loading}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          name="officeLocation"
+                          label="Office Location"
+                        >
+                          <Input
+                            placeholder="Office location (optional)"
+                            size="large"
+                            disabled={loading}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  ) : null;
+                }}
+              </Form.Item>
+
+              <Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  size="large"
+                  block
+                  style={{ marginTop: '16px' }}
+                >
+                  Create Account
+                </Button>
+              </Form.Item>
+            </Form>
+
+            <div style={{ textAlign: 'center' }}>
+              <Text>Already have an account? </Text>
+              <Link>
+                <RouterLink to="/login">Sign In</RouterLink>
               </Link>
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 };
 
