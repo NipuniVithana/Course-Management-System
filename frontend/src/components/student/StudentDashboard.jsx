@@ -4,50 +4,42 @@ import {
   Col,
   Card,
   Statistic,
-  Table,
   Button,
-  Modal,
-  Form,
-  Input,
-  Upload,
   Tag,
   Space,
   Typography,
-  Tabs,
   message,
-  Progress,
-  Divider,
-  List
+  Avatar,
+  Empty,
+  Spin,
+  Alert
 } from 'antd';
 import {
   BookOutlined,
-  FileTextOutlined,
   TrophyOutlined,
-  UploadOutlined,
-  DownloadOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  UserOutlined,
+  StarOutlined,
+  EyeOutlined,
+  RightOutlined,
+  DashboardOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import studentService from '../../services/studentService';
 
-const { Title, Text } = Typography;
-const { TabPane } = Tabs;
+const { Title, Text, Paragraph } = Typography;
 
 const StudentDashboard = () => {
-  const [dashboardData, setDashboardData] = useState({
-    enrolledCourses: 0,
-    pendingAssignments: 0,
-    averageGrade: 0,
-    completedCourses: 0
-  });
-  const [courses, setCourses] = useState([]);
-  const [assignments, setAssignments] = useState([]);
-  const [grades, setGrades] = useState([]);
-  const [profile, setProfile] = useState({});
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [uploadModalVisible, setUploadModalVisible] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
-  
-  const [uploadForm] = Form.useForm();
+  const [dashboardData, setDashboardData] = useState({
+    totalAvailableCourses: 0,
+    totalEnrolledCourses: 0,
+    completedCourses: 0,
+    averageGrade: 0
+  });
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [recentGrades, setRecentGrades] = useState([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -56,33 +48,39 @@ const StudentDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      // Mock data for now
+      
+      // Load all available courses and student's enrolled courses
+      const [allCoursesData, coursesData] = await Promise.all([
+        studentService.getAllAvailableCourses(),
+        studentService.getMyEnrollments()
+      ]);
+      
+      setEnrolledCourses(coursesData);
+
+      // Calculate dashboard statistics
+      const totalCourses = coursesData.length;
+      const coursesWithGrades = coursesData.filter(course => course.finalGrade && parseFloat(course.finalGrade) > 0);
+      const averageGrade = coursesWithGrades.length > 0 
+        ? coursesWithGrades.reduce((sum, course) => sum + parseFloat(course.finalGrade || 0), 0) / coursesWithGrades.length
+        : 0;
+
       setDashboardData({
-        enrolledCourses: 4,
-        pendingAssignments: 3,
-        averageGrade: 85,
-        completedCourses: 2
+        totalAvailableCourses: allCoursesData.length,
+        totalEnrolledCourses: totalCourses,
+        completedCourses: coursesWithGrades.length,
+        averageGrade: averageGrade.toFixed(1)
       });
-      setCourses([
-        { id: 1, courseCode: 'CS101', title: 'Introduction to Computer Science', lecturerName: 'Dr. Smith', credits: 3, schedule: 'MWF 10:00-11:00', progress: 75 },
-        { id: 2, courseCode: 'MATH201', title: 'Calculus II', lecturerName: 'Prof. Johnson', credits: 4, schedule: 'TTH 2:00-3:30', progress: 60 }
-      ]);
-      setAssignments([
-        { id: 1, title: 'Programming Assignment 1', courseName: 'CS101', dueDate: '2025-09-15', submissionStatus: 'PENDING', grade: null },
-        { id: 2, title: 'Derivative Problems', courseName: 'MATH201', dueDate: '2025-09-10', submissionStatus: 'SUBMITTED', grade: 88 }
-      ]);
-      setGrades([
-        { id: 1, courseName: 'CS101', itemName: 'Midterm Exam', grade: 92, weight: 30, gradedDate: '2025-08-20', feedback: 'Excellent work!' },
-        { id: 2, courseName: 'MATH201', itemName: 'Quiz 1', grade: 78, weight: 10, gradedDate: '2025-08-15', feedback: 'Good effort, review derivatives' }
-      ]);
-      setProfile({
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'student@university.edu',
-        studentId: 'STU001',
-        phone: '+1-555-0123',
-        createdAt: '2024-09-01'
-      });
+
+      // Set recent grades (courses with grades)
+      setRecentGrades(coursesWithGrades.slice(0, 4).map(course => ({
+        id: course.id,
+        courseName: course.title,
+        courseCode: course.courseCode,
+        grade: parseFloat(course.finalGrade),
+        lecturerName: course.lecturerName,
+        gradedDate: course.enrollmentDate
+      })));
+
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       message.error('Failed to load dashboard data');
@@ -91,431 +89,311 @@ const StudentDashboard = () => {
     }
   };
 
-  const handleSubmitAssignment = async (values) => {
-    try {
-      const formData = new FormData();
-      formData.append('assignmentId', selectedAssignment.id);
-      formData.append('submissionText', values.submissionText || '');
-      
-      if (values.file && values.file.fileList.length > 0) {
-        formData.append('file', values.file.fileList[0].originFileObj);
-      }
-
-      // Mock submission
-      message.success('Assignment submitted successfully');
-      setUploadModalVisible(false);
-      uploadForm.resetFields();
-      setSelectedAssignment(null);
-      await loadDashboardData();
-    } catch (error) {
-      console.error('Error submitting assignment:', error);
-      message.error('Failed to submit assignment');
-    }
-  };
-
-  const openSubmissionModal = (assignment) => {
-    setSelectedAssignment(assignment);
-    setUploadModalVisible(true);
-  };
-
   const getGradeColor = (grade) => {
-    if (grade >= 90) return 'green';
-    if (grade >= 80) return 'blue';
-    if (grade >= 70) return 'orange';
-    if (grade >= 60) return 'yellow';
-    return 'red';
+    if (grade >= 85) return '#52c41a';
+    if (grade >= 70) return '#1890ff';
+    if (grade >= 60) return '#fa8c16';
+    return '#ff4d4f';
   };
 
-  const getAssignmentStatus = (assignment) => {
-    const now = new Date();
-    const dueDate = new Date(assignment.dueDate);
-    
-    if (assignment.submissionStatus === 'SUBMITTED') {
-      return { status: 'Submitted', color: 'green', icon: <CheckCircleOutlined /> };
-    }
-    
-    if (now > dueDate) {
-      return { status: 'Overdue', color: 'red', icon: <ClockCircleOutlined /> };
-    }
-    
-    return { status: 'Pending', color: 'orange', icon: <ClockCircleOutlined /> };
+  const getGradeStatus = (grade) => {
+    if (grade >= 85) return 'excellent';
+    if (grade >= 70) return 'good';
+    if (grade >= 60) return 'satisfactory';
+    return 'needs-improvement';
   };
 
-  // Table columns
-  const courseColumns = [
-    {
-      title: 'Course Code',
-      dataIndex: 'courseCode',
-      key: 'courseCode',
-    },
-    {
-      title: 'Course Title',
-      dataIndex: 'title',
-      key: 'title',
-    },
-    {
-      title: 'Lecturer',
-      dataIndex: 'lecturerName',
-      key: 'lecturerName',
-    },
-    {
-      title: 'Credits',
-      dataIndex: 'credits',
-      key: 'credits',
-      render: (credits) => <Tag color="blue">{credits}</Tag>,
-    },
-    {
-      title: 'Schedule',
-      dataIndex: 'schedule',
-      key: 'schedule',
-      render: (schedule) => schedule || 'TBA',
-    },
-    {
-      title: 'Progress',
-      dataIndex: 'progress',
-      key: 'progress',
-      render: (progress) => (
-        <Progress 
-          percent={progress || 0} 
-          size="small" 
-          status={progress === 100 ? 'success' : 'active'}
+  const handleViewCourse = (course) => {
+    navigate(`/student/course/${course.courseId || course.id}`);
+  };
+
+  const renderCourseCard = (course) => (
+    <Card
+      key={course.id}
+      size="small"
+      hoverable
+      style={{ height: '100%', borderRadius: '8px' }}
+      bodyStyle={{ padding: '16px' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <Avatar 
+          icon={<BookOutlined />} 
+          style={{ 
+            backgroundColor: course.finalGrade ? getGradeColor(parseFloat(course.finalGrade)) : '#1890ff',
+            marginRight: '12px',
+            flexShrink: 0
+          }} 
         />
-      ),
-    },
-  ];
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Text strong style={{ display: 'block', fontSize: '14px' }}>
+            {course.courseCode}
+          </Text>
+          <Text style={{ fontSize: '12px', color: '#666' }}>
+            {course.credits} Credits
+          </Text>
+        </div>
+      </div>
+      
+      <Text 
+        ellipsis={{ tooltip: course.title }} 
+        style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}
+      >
+        {course.title}
+      </Text>
+      
+      <div style={{ marginBottom: '12px' }}>
+        <Space size={4}>
+          <UserOutlined style={{ fontSize: '12px', color: '#666' }} />
+          <Text style={{ fontSize: '12px', color: '#666' }}>
+            {course.lecturerName}
+          </Text>
+        </Space>
+      </div>
 
-  const assignmentColumns = [
-    {
-      title: 'Assignment',
-      dataIndex: 'title',
-      key: 'title',
-    },
-    {
-      title: 'Course',
-      dataIndex: 'courseName',
-      key: 'courseName',
-    },
-    {
-      title: 'Due Date',
-      dataIndex: 'dueDate',
-      key: 'dueDate',
-      render: (date) => new Date(date).toLocaleDateString(),
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      render: (_, record) => {
-        const { status, color, icon } = getAssignmentStatus(record);
-        return (
-          <Tag color={color} icon={icon}>
-            {status}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Space size={4}>
+          <Tag color={course.status === 'ENROLLED' ? 'green' : 'blue'} size="small">
+            {course.status}
           </Tag>
-        );
-      },
-    },
-    {
-      title: 'Grade',
-      dataIndex: 'grade',
-      key: 'grade',
-      render: (grade) => grade ? (
-        <Tag color={getGradeColor(grade)}>{grade}%</Tag>
-      ) : (
-        <Text type="secondary">Not graded</Text>
-      ),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (_, record) => {
-        const { status } = getAssignmentStatus(record);
-        return (
-          <Space>
-            {status !== 'Submitted' && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<UploadOutlined />}
-                onClick={() => openSubmissionModal(record)}
-              >
-                Submit
-              </Button>
-            )}
-            {record.materials && (
-              <Button
-                size="small"
-                icon={<DownloadOutlined />}
-                onClick={() => window.open(record.materials, '_blank')}
-              >
-                Download
-              </Button>
-            )}
-          </Space>
-        );
-      },
-    },
-  ];
+          {course.finalGrade && (
+            <Tag 
+              color={getGradeStatus(parseFloat(course.finalGrade))} 
+              size="small"
+            >
+              {course.finalGrade}%
+            </Tag>
+          )}
+        </Space>
+        <Button 
+          type="link" 
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => handleViewCourse(course)}
+          style={{ padding: '0 4px' }}
+        >
+          View
+        </Button>
+      </div>
+    </Card>
+  );
 
-  const gradeColumns = [
-    {
-      title: 'Course',
-      dataIndex: 'courseName',
-      key: 'courseName',
-    },
-    {
-      title: 'Assignment/Exam',
-      dataIndex: 'itemName',
-      key: 'itemName',
-    },
-    {
-      title: 'Grade',
-      dataIndex: 'grade',
-      key: 'grade',
-      render: (grade) => (
-        <Tag color={getGradeColor(grade)} style={{ fontSize: '14px', padding: '4px 8px' }}>
-          {grade}%
-        </Tag>
-      ),
-    },
-    {
-      title: 'Weight',
-      dataIndex: 'weight',
-      key: 'weight',
-      render: (weight) => `${weight}%`,
-    },
-    {
-      title: 'Date',
-      dataIndex: 'gradedDate',
-      key: 'gradedDate',
-      render: (date) => date ? new Date(date).toLocaleDateString() : 'N/A',
-    },
-    {
-      title: 'Feedback',
-      dataIndex: 'feedback',
-      key: 'feedback',
-      render: (feedback) => feedback || 'No feedback',
-    },
-  ];
+  const renderGradeCard = (grade) => (
+    <Card 
+      key={grade.id}
+      size="small" 
+      style={{ textAlign: 'center', borderRadius: '8px', height: '100%' }}
+      bodyStyle={{ padding: '16px' }}
+    >
+      <Avatar 
+        size={48}
+        style={{ 
+          backgroundColor: getGradeColor(grade.grade),
+          marginBottom: '8px',
+          fontSize: '16px',
+          fontWeight: 'bold'
+        }}
+      >
+        {grade.grade}%
+      </Avatar>
+      <div>
+        <Text strong style={{ display: 'block', fontSize: '14px' }}>
+          {grade.courseCode}
+        </Text>
+        <Text 
+          style={{ fontSize: '12px', color: '#666' }}
+          ellipsis={{ tooltip: grade.courseName }}
+        >
+          {grade.courseName}
+        </Text>
+      </div>
+    </Card>
+  );
+
+  if (loading) {
+    return (
+      <div style={{ 
+        padding: '24px', 
+        textAlign: 'center', 
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <Title level={2} style={{ marginBottom: 24 }}>Student Dashboard</Title>
-      
+    <div style={{ 
+      padding: '24px', 
+      backgroundColor: '#f5f5f5', 
+      minHeight: '100vh' 
+    }}>
+      {/* Header */}
+      <div style={{ marginBottom: '24px' }}>
+        <Title level={2} style={{ margin: 0, color: '#1890ff', display: 'flex', alignItems: 'center' }}>
+          <DashboardOutlined style={{ marginRight: '8px' }} />
+          Student Dashboard
+        </Title>
+        <Paragraph type="secondary" style={{ marginBottom: 0, fontSize: '16px' }}>
+          Welcome back! Here's your academic overview and recent activity.
+        </Paragraph>
+      </div>
+
       {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card 
+            style={{ borderRadius: '8px' }}
+            bodyStyle={{ padding: '20px' }}
+          >
+            <Statistic
+              title="All Courses"
+              value={dashboardData.totalAvailableCourses}
+              prefix={<BookOutlined style={{ color: '#1890ff' }} />}
+              valueStyle={{ color: '#1890ff', fontSize: '24px' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card 
+            style={{ borderRadius: '8px' }}
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
               title="Enrolled Courses"
-              value={dashboardData.enrolledCourses}
-              prefix={<BookOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              value={dashboardData.totalEnrolledCourses}
+              prefix={<BookOutlined style={{ color: '#52c41a' }} />}
+              valueStyle={{ color: '#52c41a', fontSize: '24px' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={24} sm={12} md={6}>
+          <Card 
+            style={{ borderRadius: '8px' }}
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
-              title="Pending Assignments"
-              value={dashboardData.pendingAssignments}
-              prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              title="Completed Courses"
+              value={dashboardData.completedCourses}
+              prefix={<CheckCircleOutlined style={{ color: '#faad14' }} />}
+              valueStyle={{ color: '#faad14', fontSize: '24px' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={24} sm={12} md={6}>
+          <Card 
+            style={{ borderRadius: '8px' }}
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
               title="Average Grade"
               value={dashboardData.averageGrade}
               suffix="%"
-              prefix={<TrophyOutlined />}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Completed Courses"
-              value={dashboardData.completedCourses}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              prefix={<TrophyOutlined style={{ color: '#722ed1' }} />}
+              valueStyle={{ color: '#722ed1', fontSize: '24px' }}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* Main Content Tabs */}
-      <Card>
-        <Tabs defaultActiveKey="courses">
-          <TabPane tab="My Courses" key="courses">
-            <Table
-              columns={courseColumns}
-              dataSource={courses}
-              rowKey="id"
-              loading={loading}
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
-              }}
-            />
-          </TabPane>
-
-          <TabPane tab="Assignments" key="assignments">
-            <Table
-              columns={assignmentColumns}
-              dataSource={assignments}
-              rowKey="id"
-              loading={loading}
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
-              }}
-            />
-          </TabPane>
-
-          <TabPane tab="Grades" key="grades">
-            <Table
-              columns={gradeColumns}
-              dataSource={grades}
-              rowKey="id"
-              loading={loading}
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
-              }}
-            />
-          </TabPane>
-
-          <TabPane tab="Profile" key="profile">
-            <Row gutter={24}>
-              <Col xs={24} lg={12}>
-                <Card title="Personal Information" style={{ marginBottom: 16 }}>
-                  <List>
-                    <List.Item>
-                      <List.Item.Meta
-                        title="Full Name"
-                        description={`${profile.firstName || ''} ${profile.lastName || ''}`}
-                      />
-                    </List.Item>
-                    <List.Item>
-                      <List.Item.Meta
-                        title="Email"
-                        description={profile.email || 'N/A'}
-                      />
-                    </List.Item>
-                    <List.Item>
-                      <List.Item.Meta
-                        title="Student ID"
-                        description={profile.studentId || 'N/A'}
-                      />
-                    </List.Item>
-                    <List.Item>
-                      <List.Item.Meta
-                        title="Phone"
-                        description={profile.phone || 'N/A'}
-                      />
-                    </List.Item>
-                    <List.Item>
-                      <List.Item.Meta
-                        title="Enrollment Date"
-                        description={profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}
-                      />
-                    </List.Item>
-                  </List>
-                </Card>
-              </Col>
-              <Col xs={24} lg={12}>
-                <Card title="Academic Summary" style={{ marginBottom: 16 }}>
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    <div>
-                      <Text strong>Overall GPA:</Text>
-                      <div style={{ marginTop: 8 }}>
-                        <Progress
-                          percent={(dashboardData.averageGrade / 100) * 100}
-                          format={() => `${dashboardData.averageGrade}%`}
-                          strokeColor={getGradeColor(dashboardData.averageGrade)}
-                        />
-                      </div>
-                    </div>
-                    <Divider />
-                    <div>
-                      <Text strong>Course Progress:</Text>
-                      <div style={{ marginTop: 8 }}>
-                        <Progress
-                          percent={dashboardData.completedCourses > 0 ? 
-                            (dashboardData.completedCourses / (dashboardData.completedCourses + dashboardData.enrolledCourses)) * 100 : 0}
-                          format={() => `${dashboardData.completedCourses} completed`}
-                        />
-                      </div>
-                    </div>
-                  </Space>
-                </Card>
-              </Col>
-            </Row>
-          </TabPane>
-        </Tabs>
-      </Card>
-
-      {/* Assignment Submission Modal */}
-      <Modal
-        title={`Submit Assignment: ${selectedAssignment?.title}`}
-        open={uploadModalVisible}
-        onCancel={() => {
-          setUploadModalVisible(false);
-          setSelectedAssignment(null);
-          uploadForm.resetFields();
-        }}
-        footer={null}
-        destroyOnClose
-      >
-        <Form
-          form={uploadForm}
-          layout="vertical"
-          onFinish={handleSubmitAssignment}
-        >
-          <Form.Item
-            name="submissionText"
-            label="Submission Text (Optional)"
+      <Row gutter={[16, 16]}>
+        {/* My Courses Section */}
+        <Col xs={24} lg={16}>
+          <Card
+            title={
+              <Space>
+                <BookOutlined />
+                <span>My Enrolled Courses</span>
+              </Space>
+            }
+            extra={
+              <Button 
+                type="primary" 
+                icon={<RightOutlined />}
+                onClick={() => navigate('/student/my-courses')}
+              >
+                View All
+              </Button>
+            }
+            style={{ borderRadius: '8px', marginBottom: '16px' }}
           >
-            <Input.TextArea
-              rows={4}
-              placeholder="Enter any text submission or comments..."
-            />
-          </Form.Item>
+            {enrolledCourses.length > 0 ? (
+              <Row gutter={[12, 12]}>
+                {enrolledCourses.slice(0, 4).map(course => (
+                  <Col xs={24} sm={12} key={course.id}>
+                    {renderCourseCard(course)}
+                  </Col>
+                ))}
+              </Row>
+            ) : (
+              <Empty 
+                description={
+                  <span>
+                    No enrolled courses yet.{' '}
+                    <Button 
+                      type="link" 
+                      onClick={() => navigate('/student/all-courses')}
+                      style={{ padding: 0 }}
+                    >
+                      Browse available courses
+                    </Button>
+                  </span>
+                }
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            )}
+          </Card>
 
-          <Form.Item
-            name="file"
-            label="Upload File (Optional)"
-          >
-            <Upload
-              beforeUpload={() => false}
-              maxCount={1}
-              accept=".pdf,.doc,.docx,.txt,.zip"
+        </Col>
+
+        {/* Right Sidebar */}
+        <Col xs={24} lg={8}>
+          {/* Recent Grades */}
+          {recentGrades.length > 0 && (
+            <Card
+              title={
+                <Space>
+                  <StarOutlined />
+                  <span>Recent Grades</span>
+                </Space>
+              }
+              style={{ borderRadius: '8px' }}
             >
-              <Button icon={<UploadOutlined />}>Click to Upload</Button>
-            </Upload>
-          </Form.Item>
+              <Row gutter={[12, 12]}>
+                {recentGrades.map(grade => (
+                  <Col xs={12} key={grade.id}>
+                    {renderGradeCard(grade)}
+                  </Col>
+                ))}
+              </Row>
+            </Card>
+          )}
+        </Col>
+      </Row>
 
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit">
-                Submit Assignment
+      {/* Welcome Alert for New Students */}
+      {dashboardData.totalEnrolledCourses === 0 && (
+        <Alert
+          message="Welcome to the Course Management System!"
+          description={
+            <div>
+              <p>Get started by browsing and enrolling in available courses.</p>
+              <Button 
+                type="primary" 
+                icon={<BookOutlined />}
+                onClick={() => navigate('/student/all-courses')}
+              >
+                Browse Courses
               </Button>
-              <Button onClick={() => {
-                setUploadModalVisible(false);
-                setSelectedAssignment(null);
-                uploadForm.resetFields();
-              }}>
-                Cancel
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+            </div>
+          }
+          type="info"
+          showIcon
+          style={{ marginTop: '16px', borderRadius: '8px' }}
+        />
+      )}
     </div>
   );
 };

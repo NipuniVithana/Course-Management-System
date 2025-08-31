@@ -20,13 +20,19 @@ import Courses from './components/admin/Courses';
 import AddCourse from './components/admin/AddCourse';
 
 // Lecturer Components
-import AllCourses from './components/lecturer/AllCourses';
 import MyCourses from './components/lecturer/MyCourses';
 import CourseManagement from './components/lecturer/CourseManagement';
+
+// Student Components
+// (Student specific components if any)
+
+// Shared Components
+import AllCourses from './components/common/AllCourses';
 
 // Common Components
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Layout from './components/common/Layout';
+import Profile from './components/common/Profile';
 
 function App() {
   const { user, loading } = useAuth();
@@ -66,6 +72,15 @@ function App() {
               {user?.role === 'ADMIN' && <AdminDashboard />}
               {user?.role === 'LECTURER' && <LecturerDashboard />}
               {user?.role === 'STUDENT' && <StudentDashboard />}
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* Profile Route - Available to all authenticated users */}
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Layout>
+              <Profile />
             </Layout>
           </ProtectedRoute>
         } />
@@ -120,21 +135,21 @@ function App() {
         } />
 
         {/* Lecturer Routes */}
-        <Route path="/lecturer/browse-courses" element={
+        <Route path="/lecturer/all-courses" element={
           <ProtectedRoute allowedRoles={['LECTURER']}>
             <Layout>
-              <AllCourses />
+              <AllCourses userRole="LECTURER" />
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/lecturer/my-courses" element={
           <ProtectedRoute allowedRoles={['LECTURER']}>
             <Layout>
-              <MyCourses />
+              <MyCourses userRole="LECTURER" />
             </Layout>
           </ProtectedRoute>
         } />
-        <Route path="/lecturer/course/:courseId" element={
+        <Route path="/lecturer/course-management/:courseId" element={
           <ProtectedRoute allowedRoles={['LECTURER']}>
             <Layout>
               <CourseManagement />
@@ -150,6 +165,27 @@ function App() {
         } />
 
         {/* Student Routes */}
+        <Route path="/student/all-courses" element={
+          <ProtectedRoute allowedRoles={['STUDENT']}>
+            <Layout>
+              <AllCourses userRole="STUDENT" />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/student/my-courses" element={
+          <ProtectedRoute allowedRoles={['STUDENT']}>
+            <Layout>
+              <MyCourses userRole="STUDENT" />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/student/course/:courseId" element={
+          <ProtectedRoute allowedRoles={['STUDENT']}>
+            <Layout>
+              <CourseManagement userRole="STUDENT" />
+            </Layout>
+          </ProtectedRoute>
+        } />
         <Route path="/student/*" element={
           <ProtectedRoute allowedRoles={['STUDENT']}>
             <Layout>

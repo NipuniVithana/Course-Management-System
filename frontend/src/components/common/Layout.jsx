@@ -3,19 +3,13 @@ import { Layout as AntLayout, Menu, Avatar, Dropdown, Space, Typography, theme }
 import {
   UserOutlined,
   LogoutOutlined,
-  SettingOutlined,
   DashboardOutlined,
   TeamOutlined,
   BookOutlined,
-  FileTextOutlined,
-  CalendarOutlined,
-  BarChartOutlined,
   ReadOutlined,
-  UserAddOutlined,
   BankOutlined,
   MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  ProfileOutlined
+  MenuUnfoldOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -40,11 +34,7 @@ const Layout = ({ children }) => {
     if (key === 'logout') {
       handleLogout();
     } else if (key === 'profile') {
-      // Handle profile navigation
-      console.log('Profile clicked');
-    } else if (key === 'settings') {
-      // Handle settings navigation
-      console.log('Settings clicked');
+      navigate('/profile');
     }
   };
 
@@ -54,6 +44,7 @@ const Layout = ({ children }) => {
       case 'dashboard':
         navigate('/dashboard');
         break;
+      // Admin navigation
       case 'students':
         navigate('/admin/students');
         break;
@@ -64,14 +55,21 @@ const Layout = ({ children }) => {
         navigate('/admin/degrees');
         break;
       case 'all-courses':
-        navigate('/admin/courses');
+        if (user?.role === 'ADMIN') {
+          navigate('/admin/courses');
+        } else if (user?.role === 'LECTURER') {
+          navigate('/lecturer/all-courses');
+        } else if (user?.role === 'STUDENT') {
+          navigate('/student/all-courses');
+        }
         break;
       // Lecturer navigation
-      case 'browse-courses':
-        navigate('/lecturer/browse-courses');
-        break;
       case 'my-courses':
-        navigate('/lecturer/my-courses');
+        if (user?.role === 'LECTURER') {
+          navigate('/lecturer/my-courses');
+        } else if (user?.role === 'STUDENT') {
+          navigate('/student/my-courses');
+        }
         break;
       default:
         console.log('Menu item clicked:', key);
@@ -83,11 +81,6 @@ const Layout = ({ children }) => {
       key: 'profile',
       icon: <UserOutlined />,
       label: 'Profile',
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: 'Settings',
     },
     {
       type: 'divider',
@@ -153,7 +146,7 @@ const Layout = ({ children }) => {
         return [
           ...baseItems,
           {
-            key: 'browse-courses',
+            key: 'all-courses',
             icon: <BookOutlined />,
             label: 'All Courses',
           },
@@ -168,51 +161,14 @@ const Layout = ({ children }) => {
         return [
           ...baseItems,
           {
+            key: 'all-courses',
+            icon: <BookOutlined />,
+            label: 'All Courses',
+          },
+          {
             key: 'my-courses',
             icon: <BookOutlined />,
             label: 'My Courses',
-          },
-          {
-            key: 'assignments',
-            icon: <FileTextOutlined />,
-            label: 'Assignments',
-            children: [
-              {
-                key: 'pending-assignments',
-                icon: <FileTextOutlined />,
-                label: 'Pending',
-              },
-              {
-                key: 'submitted-assignments',
-                icon: <ReadOutlined />,
-                label: 'Submitted',
-              },
-              {
-                key: 'graded-assignments',
-                icon: <BarChartOutlined />,
-                label: 'Graded',
-              },
-            ],
-          },
-          {
-            key: 'schedule',
-            icon: <CalendarOutlined />,
-            label: 'Class Schedule',
-          },
-          {
-            key: 'grades',
-            icon: <BarChartOutlined />,
-            label: 'My Grades',
-          },
-          {
-            key: 'enrollment',
-            icon: <UserAddOutlined />,
-            label: 'Course Enrollment',
-          },
-          {
-            key: 'profile',
-            icon: <ProfileOutlined />,
-            label: 'My Profile',
           },
         ];
 

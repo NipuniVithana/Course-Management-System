@@ -47,7 +47,7 @@ const MyCourses = ({ userRole = 'LECTURER' }) => {
     if (isStudent) {
       navigate(`/student/course/${course.courseId || course.id}`);
     } else {
-      navigate(`/lecturer/course-management/${course.id}`);
+      navigate(`/lecturer/course/${course.id}`);
     }
   };
 
@@ -124,7 +124,7 @@ const MyCourses = ({ userRole = 'LECTURER' }) => {
         <Table
           columns={columns}
           dataSource={courses}
-          rowKey={isStudent ? (record) => record.id || record.courseId : 'id'}
+          rowKey={isStudent ? 'id' : 'id'}
           loading={loading}
           scroll={{ x: 800 }}
           pagination={{

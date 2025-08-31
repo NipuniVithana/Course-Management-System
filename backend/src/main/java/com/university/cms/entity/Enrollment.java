@@ -31,6 +31,12 @@ public class Enrollment {
     @Column(name = "final_grade")
     private String finalGrade;
     
+    @Column(name = "feedback")
+    private String feedback;
+    
+    @Column(name = "graded_date")
+    private LocalDateTime gradedDate;
+    
     // Constructors
     public Enrollment() {}
     
@@ -86,6 +92,22 @@ public class Enrollment {
     
     public void setFinalGrade(String finalGrade) {
         this.finalGrade = finalGrade;
+    }
+    
+    public String getFeedback() {
+        return feedback;
+    }
+    
+    public void setFeedback(String feedback) {
+        this.feedback = feedback;
+    }
+    
+    public LocalDateTime getGradedDate() {
+        return gradedDate;
+    }
+    
+    public void setGradedDate(LocalDateTime gradedDate) {
+        this.gradedDate = gradedDate;
     }
     
     // Enums

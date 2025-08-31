@@ -9,16 +9,13 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   Upload,
   Space,
   Tabs,
   List,
   Avatar,
   Breadcrumb,
-  Row,
-  Col,
-  Statistic,
-  Divider,
   Spin,
   Dropdown
 } from 'antd';
@@ -39,12 +36,13 @@ import {
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import lecturerService from '../../services/lecturerService';
+import studentService from '../../services/studentService';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 const { TextArea } = Input;
 
-const CourseManagement = () => {
+const CourseManagement = ({ userRole = 'LECTURER' }) => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
@@ -61,19 +59,38 @@ const CourseManagement = () => {
   const [editForm] = Form.useForm();
   const [gradeForm] = Form.useForm();
 
+  // Role-based configuration
+  const isStudent = userRole === 'STUDENT';
+  const [studentGrade, setStudentGrade] = useState(null);
+
   useEffect(() => {
     const loadData = async () => {
       if (courseId) {
         try {
           setLoading(true);
-          const [courseData, studentsData, materialsData] = await Promise.all([
-            lecturerService.getCourseById(courseId),
-            lecturerService.getEnrolledStudents(courseId),
-            lecturerService.getCourseMaterials(courseId)
-          ]);
-          setCourse(courseData);
-          setStudents(studentsData);
-          setMaterials(materialsData);
+          if (isStudent) {
+            // For students, load course data, materials, students, and their grades
+            const [courseData, materialsData, studentsData, gradesData] = await Promise.all([
+              studentService.getCourseById(courseId),
+              studentService.getCourseMaterials(courseId).catch(() => []),
+              studentService.getCourseStudents(courseId).catch(() => []),
+              studentService.getCourseGrades(courseId).catch(() => null)
+            ]);
+            setCourse(courseData);
+            setMaterials(materialsData);
+            setStudents(studentsData);
+            setStudentGrade(gradesData);
+          } else {
+            // For lecturers, load all data as before
+            const [courseData, studentsData, materialsData] = await Promise.all([
+              lecturerService.getCourseById(courseId),
+              lecturerService.getEnrolledStudents(courseId),
+              lecturerService.getCourseMaterials(courseId)
+            ]);
+            setCourse(courseData);
+            setStudents(studentsData);
+            setMaterials(materialsData);
+          }
         } catch (error) {
           console.error('Error loading course data:', error);
           message.error('Failed to load course data');
@@ -84,16 +101,29 @@ const CourseManagement = () => {
     };
     
     loadData();
-  }, [courseId]);
+  }, [courseId, isStudent]);
 
   const loadCourseData = async () => {
     try {
-      const [studentsData, materialsData] = await Promise.all([
-        lecturerService.getEnrolledStudents(courseId),
-        lecturerService.getCourseMaterials(courseId)
-      ]);
-      setStudents(studentsData);
-      setMaterials(materialsData);
+      if (isStudent) {
+        // For students, reload materials and students using student endpoints
+        const [materialsData, studentsData, gradesData] = await Promise.all([
+          studentService.getCourseMaterials(courseId).catch(() => []),
+          studentService.getCourseStudents(courseId).catch(() => []),
+          studentService.getCourseGrades(courseId).catch(() => null)
+        ]);
+        setMaterials(materialsData);
+        setStudents(studentsData);
+        setStudentGrade(gradesData);
+      } else {
+        // For lecturers, reload all data
+        const [studentsData, materialsData] = await Promise.all([
+          lecturerService.getEnrolledStudents(courseId),
+          lecturerService.getCourseMaterials(courseId)
+        ]);
+        setStudents(studentsData);
+        setMaterials(materialsData);
+      }
     } catch (error) {
       console.error('Error loading course data:', error);
       message.error('Failed to load course data');
@@ -120,10 +150,20 @@ const CourseManagement = () => {
         selectedStudent.id,
         values
       );
+      
+      // Update the local students state immediately
+      setStudents(prevStudents => 
+        prevStudents.map(student => 
+          student.id === selectedStudent.id 
+            ? { ...student, grade: values.grade, feedback: values.feedback }
+            : student
+        )
+      );
+      
       message.success('Grade updated successfully');
       setGradeModal(false);
       gradeForm.resetFields();
-      await loadCourseData();
+      setSelectedStudent(null);
     } catch (error) {
       console.error('Error updating grade:', error);
       message.error('Failed to update grade');
@@ -188,7 +228,7 @@ const CourseManagement = () => {
   const showGradeModal = (student) => {
     setSelectedStudent(student);
     gradeForm.setFieldsValue({
-      grade: student.grade || '',
+      grade: student.grade ? Number(student.grade) : undefined,
       feedback: student.feedback || ''
     });
     setGradeModal(true);
@@ -199,11 +239,12 @@ const CourseManagement = () => {
       title: 'Student ID',
       dataIndex: 'studentId',
       key: 'studentId',
-      width: 120,
+      width: 150,
     },
     {
       title: 'Name',
       key: 'name',
+      width: 250,
       render: (_, record) => (
         <Space>
           <Avatar icon={<UserOutlined />} />
@@ -215,37 +256,7 @@ const CourseManagement = () => {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
-    },
-    {
-      title: 'Grade',
-      dataIndex: 'grade',
-      key: 'grade',
-      width: 100,
-      render: (grade) => (
-        grade ? (
-          <Tag color={grade >= 85 ? 'green' : grade >= 70 ? 'blue' : grade >= 60 ? 'orange' : 'red'}>
-            {grade}%
-          </Tag>
-        ) : (
-          <Tag color="default">N/A</Tag>
-        )
-      ),
-    },
-    {
-      title: 'Action',
-      key: 'action',
-      width: 150,
-      render: (_, record) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => showGradeModal(record)}
-          >
-            Grade
-          </Button>
-        </Space>
-      ),
+      width: 280,
     },
   ];
 
@@ -261,7 +272,7 @@ const CourseManagement = () => {
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
         <Title level={4}>Course not found</Title>
-        <Button onClick={() => navigate('/lecturer/my-courses')}>
+        <Button onClick={() => navigate(isStudent ? '/student/my-courses' : '/lecturer/my-courses')}>
           Go back to My Courses
         </Button>
       </div>
@@ -277,13 +288,16 @@ const CourseManagement = () => {
             <HomeOutlined />
           </Breadcrumb.Item>
           <Breadcrumb.Item>
-            <Button 
-              type="link" 
-              style={{ padding: 0 }}
-              onClick={() => navigate('/lecturer/my-courses')}
+            <span 
+              style={{ 
+                color: '#1890ff', 
+                cursor: 'pointer',
+                textDecoration: 'none'
+              }}
+              onClick={() => navigate(isStudent ? '/student/my-courses' : '/lecturer/my-courses')}
             >
               My Courses
-            </Button>
+            </span>
           </Breadcrumb.Item>
           <Breadcrumb.Item>{course.title}</Breadcrumb.Item>
         </Breadcrumb>
@@ -304,43 +318,14 @@ const CourseManagement = () => {
           </div>
           <Button 
             icon={<ArrowLeftOutlined />} 
-            onClick={() => navigate('/lecturer/my-courses')}
+            onClick={() => navigate(isStudent ? '/student/my-courses' : '/lecturer/my-courses')}
           >
             Back to My Courses
           </Button>
         </div>
       </div>
 
-      {/* Course Statistics */}
-      <Card style={{ marginBottom: 24 }}>
-        <Row gutter={16}>
-          <Col span={8}>
-            <Statistic
-              title="Enrolled Students"
-              value={students.length}
-              prefix={<TeamOutlined />}
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title="Course Materials"
-              value={materials.length}
-              prefix={<FileTextOutlined />}
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title="Average Grade"
-              value={students.length > 0 ? 
-                (students.filter(s => s.grade).reduce((sum, s) => sum + s.grade, 0) / 
-                students.filter(s => s.grade).length || 0).toFixed(1) : 0
-              }
-              suffix="%"
-              prefix={<TrophyOutlined />}
-            />
-          </Col>
-        </Row>
-      </Card>
+
 
       {/* Main Content Tabs */}
       <Card>
@@ -354,59 +339,80 @@ const CourseManagement = () => {
             } 
             key="materials"
           >
-            <div style={{ marginBottom: 16 }}>
-              <Button
-                type="primary"
-                icon={<UploadOutlined />}
-                onClick={() => setUploadModal(true)}
-              >
-                Upload Material
-              </Button>
-            </div>
+            {!isStudent && (
+              <div style={{ marginBottom: 16 }}>
+                <Button
+                  type="primary"
+                  icon={<UploadOutlined />}
+                  onClick={() => setUploadModal(true)}
+                >
+                  Upload Material
+                </Button>
+              </div>
+            )}
             <List
               dataSource={materials}
               renderItem={(material) => {
-                const menuItems = [
-                  {
-                    key: 'edit',
-                    label: 'Edit',
-                    icon: <EditOutlined />,
-                    onClick: () => handleEditMaterial(material)
-                  },
+                let menuItems = [
                   {
                     key: 'download',
                     label: 'Download',
                     icon: <DownloadOutlined />,
                     onClick: () => handleDownloadMaterial(material)
-                  },
-                  {
-                    key: 'delete',
-                    label: 'Delete',
-                    icon: <DeleteOutlined />,
-                    danger: true,
-                    onClick: () => handleDeleteMaterial(material)
                   }
                 ];
 
+                // Only add edit and delete options for lecturers
+                if (!isStudent) {
+                  menuItems = [
+                    {
+                      key: 'edit',
+                      label: 'Edit',
+                      icon: <EditOutlined />,
+                      onClick: () => handleEditMaterial(material)
+                    },
+                    ...menuItems,
+                    {
+                      key: 'delete',
+                      label: 'Delete',
+                      icon: <DeleteOutlined />,
+                      danger: true,
+                      onClick: () => handleDeleteMaterial(material)
+                    }
+                  ];
+                }
+
                 return (
                   <List.Item
-                    actions={[
-                      <Dropdown
-                        menu={{ items: menuItems }}
-                        trigger={['click']}
-                        placement="bottomRight"
-                      >
+                    actions={
+                      isStudent ? [
+                        // For students, show only download button directly
                         <Button
                           type="text"
-                          icon={<MoreOutlined />}
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center' 
-                          }}
-                        />
-                      </Dropdown>
-                    ]}
+                          icon={<DownloadOutlined />}
+                          onClick={() => handleDownloadMaterial(material)}
+                        >
+                          Download
+                        </Button>
+                      ] : [
+                        // For lecturers, show dropdown menu
+                        <Dropdown
+                          menu={{ items: menuItems }}
+                          trigger={['click']}
+                          placement="bottomRight"
+                        >
+                          <Button
+                            type="text"
+                            icon={<MoreOutlined />}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center' 
+                            }}
+                          />
+                        </Dropdown>
+                      ]
+                    }
                   >
                     <List.Item.Meta
                       avatar={<Avatar icon={<FileTextOutlined />} />}
@@ -448,12 +454,7 @@ const CourseManagement = () => {
               columns={studentColumns}
               dataSource={students}
               rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total) => `Total ${total} students`
-              }}
+              scroll={{ x: 700 }}
             />
           </TabPane>
 
@@ -466,60 +467,129 @@ const CourseManagement = () => {
             } 
             key="results"
           >
-            <div style={{ textAlign: 'center', padding: '60px 0' }}>
-              <TrophyOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
-              <Title level={4} type="secondary">Results Summary</Title>
+            <div style={{ marginBottom: 16 }}>
+              <Title level={4}>
+                {isStudent ? 'My Results' : 'Student Results'}
+              </Title>
               <Text type="secondary">
-                Detailed results and analytics will be available here
+                {isStudent ? 'View your grades and feedback' : 'Add and manage student grades'}
               </Text>
-              <Divider />
-              <Row gutter={16} style={{ marginTop: 24 }}>
-                <Col span={8}>
-                  <Card>
-                    <Statistic
-                      title="Pass Rate"
-                      value={students.length > 0 ? 
-                        ((students.filter(s => s.grade >= 60).length / students.length) * 100).toFixed(1) : 0
-                      }
-                      suffix="%"
-                      valueStyle={{ color: '#3f8600' }}
-                    />
-                  </Card>
-                </Col>
-                <Col span={8}>
-                  <Card>
-                    <Statistic
-                      title="Highest Grade"
-                      value={students.length > 0 ? Math.max(...students.map(s => s.grade || 0)) : 0}
-                      suffix="%"
-                      valueStyle={{ color: '#1890ff' }}
-                    />
-                  </Card>
-                </Col>
-                <Col span={8}>
-                  <Card>
-                    <Statistic
-                      title="Lowest Grade"
-                      value={students.length > 0 ? Math.min(...students.filter(s => s.grade).map(s => s.grade)) || 0 : 0}
-                      suffix="%"
-                      valueStyle={{ color: '#cf1322' }}
-                    />
-                  </Card>
-                </Col>
-              </Row>
             </div>
+            
+            {isStudent ? (
+              // Student view - show only their own results
+              <div style={{ padding: '24px', textAlign: 'center' }}>
+                <Title level={3}>Your Grade for this Course</Title>
+                <div style={{ 
+                  padding: '32px', 
+                  backgroundColor: '#f5f5f5', 
+                  borderRadius: '8px',
+                  marginTop: '16px'
+                }}>
+                  {studentGrade ? (
+                    <>
+                      <Tag 
+                        color={studentGrade.grade >= 85 ? 'green' : studentGrade.grade >= 70 ? 'blue' : studentGrade.grade >= 60 ? 'orange' : 'red'}
+                        style={{ fontSize: '24px', padding: '12px 24px', borderRadius: '8px' }}
+                      >
+                        Grade: {studentGrade.grade}%
+                      </Tag>
+                      {studentGrade.feedback && (
+                        <div style={{ marginTop: '16px' }}>
+                          <Title level={5}>Feedback:</Title>
+                          <Text style={{ fontStyle: 'italic' }}>{studentGrade.feedback}</Text>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Tag 
+                        color="default" 
+                        style={{ fontSize: '24px', padding: '12px 24px', borderRadius: '8px' }}
+                      >
+                        Grade: Not Available
+                      </Tag>
+                      <div style={{ marginTop: '16px', color: '#666' }}>
+                        <Text>Your grade has not been assigned yet</Text>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              // Lecturer view - show all students with grade management
+              <Table
+                columns={[
+                  {
+                    title: 'Student ID',
+                    dataIndex: 'studentId',
+                    key: 'studentId',
+                    width: 150,
+                  },
+                  {
+                    title: 'Name',
+                    key: 'name',
+                    width: 280,
+                    render: (_, record) => (
+                      <Space>
+                        <Avatar icon={<UserOutlined />} />
+                        {`${record.firstName} ${record.lastName}`}
+                      </Space>
+                    ),
+                  },
+                  {
+                    title: 'Current Grade',
+                    dataIndex: 'grade',
+                    key: 'grade',
+                    width: 150,
+                    align: 'center',
+                    render: (grade) => (
+                      grade ? (
+                        <Tag color={grade >= 85 ? 'green' : grade >= 70 ? 'blue' : grade >= 60 ? 'orange' : 'red'}>
+                          {grade}%
+                        </Tag>
+                      ) : (
+                        <Tag color="default">No Grade</Tag>
+                      )
+                    ),
+                  },
+                  {
+                    title: 'Action',
+                    key: 'action',
+                    width: 150,
+                    align: 'center',
+                    render: (_, record) => (
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => showGradeModal(record)}
+                      >
+                        {record.grade ? 'Edit Grade' : 'Add Grade'}
+                      </Button>
+                    ),
+                  },
+                ]}
+                dataSource={students}
+                rowKey="id"
+                scroll={{ x: 730 }}
+              />
+            )}
           </TabPane>
         </Tabs>
       </Card>
 
-      {/* Upload Material Modal */}
-      <Modal
-        title="Upload Course Material"
-        open={uploadModal}
-        onOk={form.submit}
-        onCancel={() => setUploadModal(false)}
-        width={600}
-      >
+      {/* Lecturer-only Modals */}
+      {!isStudent && (
+        <>
+          {/* Upload Material Modal */}
+          <Modal
+            title="Upload Course Material"
+            open={uploadModal}
+            onOk={form.submit}
+            onCancel={() => setUploadModal(false)}
+            width={600}
+          >
         <Form
           form={form}
           layout="vertical"
@@ -622,10 +692,25 @@ const CourseManagement = () => {
             label="Grade (%)"
             rules={[
               { required: true, message: 'Please enter grade' },
-              { type: 'number', min: 0, max: 100, message: 'Grade must be between 0 and 100' }
+              { 
+                validator: (_, value) => {
+                  if (value === null || value === undefined) {
+                    return Promise.reject(new Error('Please enter grade'));
+                  }
+                  if (value < 0 || value > 100) {
+                    return Promise.reject(new Error('Grade must be between 0 and 100'));
+                  }
+                  return Promise.resolve();
+                }
+              }
             ]}
           >
-            <Input type="number" placeholder="Enter grade (0-100)" />
+            <InputNumber 
+              min={0} 
+              max={100} 
+              style={{ width: '100%' }}
+              placeholder="Enter grade (0-100)" 
+            />
           </Form.Item>
           <Form.Item
             name="feedback"
@@ -635,6 +720,8 @@ const CourseManagement = () => {
           </Form.Item>
         </Form>
       </Modal>
+        </>
+      )}
     </div>
   );
 };

@@ -7,6 +7,7 @@ import com.university.cms.entity.Lecturer;
 import com.university.cms.entity.Student;
 import com.university.cms.entity.User;
 import com.university.cms.repository.CourseRepository;
+import com.university.cms.repository.EnrollmentRepository;
 import com.university.cms.repository.LecturerRepository;
 import com.university.cms.repository.StudentRepository;
 import com.university.cms.repository.UserRepository;
@@ -27,6 +28,9 @@ public class CourseService {
 
     @Autowired
     private CourseRepository courseRepository;
+
+    @Autowired
+    private EnrollmentRepository enrollmentRepository;
 
     @Autowired
     private LecturerRepository lecturerRepository;
@@ -376,12 +380,60 @@ public class CourseService {
                     if (course.getLecturer() != null) {
                         courseData.put("lecturerName", course.getLecturer().getFirstName() + " " + course.getLecturer().getLastName());
                         courseData.put("lecturerId", course.getLecturer().getId());
-                        courseData.put("isAssigned", course.getLecturer().getId().equals(lecturer.getId()));
+                        courseData.put("isRegistered", course.getLecturer().getId().equals(lecturer.getId()));
                     } else {
                         courseData.put("lecturerName", null);
                         courseData.put("lecturerId", null);
-                        courseData.put("isAssigned", false);
+                        courseData.put("isRegistered", false);
                     }
+                    
+                    return courseData;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // Student-specific methods
+    public List<Map<String, Object>> getAvailableCoursesForStudent(Student student) {
+        List<Course> allCourses = courseRepository.findAll();
+        return allCourses.stream()
+                .map(course -> {
+                    Map<String, Object> courseData = new HashMap<>();
+                    courseData.put("id", course.getId());
+                    courseData.put("courseCode", course.getCourseCode());
+                    courseData.put("title", course.getTitle());
+                    courseData.put("department", course.getDepartment());
+                    courseData.put("credits", course.getCredits());
+                    courseData.put("capacity", course.getCapacity());
+                    courseData.put("status", course.getStatus());
+                    courseData.put("description", course.getDescription());
+                    
+                    // Add degree information
+                    if (course.getDegree() != null) {
+                        courseData.put("degreeName", course.getDegree().getName());
+                        courseData.put("degreeId", course.getDegree().getId());
+                    } else {
+                        courseData.put("degreeName", null);
+                        courseData.put("degreeId", null);
+                    }
+                    
+                    // Add lecturer information
+                    if (course.getLecturer() != null) {
+                        courseData.put("lecturerName", course.getLecturer().getFirstName() + " " + course.getLecturer().getLastName());
+                        courseData.put("lecturerId", course.getLecturer().getId());
+                    } else {
+                        courseData.put("lecturerName", null);
+                        courseData.put("lecturerId", null);
+                    }
+                    
+                    // Add enrollment information
+                    boolean isEnrolled = enrollmentRepository
+                            .findByStudentIdAndCourseId(student.getId(), course.getId())
+                            .isPresent();
+                    courseData.put("isEnrolled", isEnrolled);
+                    
+                    // Add enrolled count
+                    long enrolledCount = enrollmentRepository.countEnrolledByCourseId(course.getId());
+                    courseData.put("enrolledCount", enrolledCount);
                     
                     return courseData;
                 })

@@ -25,8 +25,13 @@ const studentService = {
   },
 
   // Course Management
+  getAllAvailableCourses: async () => {
+    const response = await api.get('/student/courses');
+    return response.data;
+  },
+
   getAvailableCourses: async () => {
-    const response = await api.get('/student/courses/available');
+    const response = await api.get('/student/courses');
     return response.data;
   },
 
@@ -36,6 +41,11 @@ const studentService = {
   },
 
   // Enrollment Management
+  enrollToCourse: async (courseId) => {
+    const response = await api.post('/student/enrollments', { courseId });
+    return response.data;
+  },
+
   enrollInCourse: async (courseId) => {
     const response = await api.post('/student/enrollments', { courseId });
     return response.data;
@@ -59,6 +69,18 @@ const studentService = {
 
   getCourseGrades: async (courseId) => {
     const response = await api.get(`/student/courses/${courseId}/grades`);
+    return response.data;
+  },
+
+  // Course Materials
+  getCourseMaterials: async (courseId) => {
+    const response = await api.get(`/student/courses/${courseId}/materials`);
+    return response.data;
+  },
+
+  // Course Students (for viewing classmates)
+  getCourseStudents: async (courseId) => {
+    const response = await api.get(`/student/courses/${courseId}/students`);
     return response.data;
   },
 

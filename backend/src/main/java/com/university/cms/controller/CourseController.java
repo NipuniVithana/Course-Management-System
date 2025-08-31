@@ -2,10 +2,15 @@ package com.university.cms.controller;
 
 import com.university.cms.dto.CourseDto;
 import com.university.cms.entity.Course;
+import com.university.cms.entity.User;
+import com.university.cms.entity.Student;
 import com.university.cms.service.CourseService;
+import com.university.cms.service.AuthService;
+import com.university.cms.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -21,6 +26,12 @@ public class CourseController {
 
     @Autowired
     private CourseService courseService;
+    
+    @Autowired
+    private AuthService authService;
+    
+    @Autowired
+    private StudentService studentService;
 
     // Admin endpoints
     @GetMapping("/admin/courses")
@@ -128,21 +139,16 @@ public class CourseController {
     // Student endpoints
     @GetMapping("/student/courses")
     @PreAuthorize("hasRole('STUDENT')")
-    public ResponseEntity<List<Course>> getAvailableCourses() {
-        List<Course> courses = courseService.getAllCourses();
-        return ResponseEntity.ok(courses);
-    }
-
-    @GetMapping("/student/courses/{id}")
-    @PreAuthorize("hasRole('STUDENT')")
-    public ResponseEntity<?> getStudentCourse(@PathVariable Long id) {
+    public ResponseEntity<List<Map<String, Object>>> getAvailableCourses(Authentication authentication) {
         try {
-            Course course = courseService.getCourseById(id);
-            return ResponseEntity.ok(course);
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Student student = studentService.getStudentByUser(user);
+            
+            List<Map<String, Object>> courses = courseService.getAvailableCoursesForStudent(student);
+            return ResponseEntity.ok(courses);
         } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            return ResponseEntity.badRequest().build();
         }
     }
 
