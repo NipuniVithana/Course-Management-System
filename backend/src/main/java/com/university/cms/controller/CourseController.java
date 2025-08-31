@@ -1,6 +1,6 @@
 package com.university.cms.controller;
 
-import com.university.cms.dto.CourseRequest;
+import com.university.cms.dto.CourseDto;
 import com.university.cms.entity.Course;
 import com.university.cms.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +32,7 @@ public class CourseController {
 
     @PostMapping("/admin/courses")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> createCourse(@Valid @RequestBody CourseRequest courseRequest) {
+    public ResponseEntity<?> createCourse(@Valid @RequestBody CourseDto courseRequest) {
         try {
             Course course = courseService.createCourse(courseRequest);
             return ResponseEntity.ok(course);
@@ -45,7 +45,7 @@ public class CourseController {
 
     @PutMapping("/admin/courses/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateCourse(@PathVariable Long id, @Valid @RequestBody CourseRequest courseRequest) {
+    public ResponseEntity<?> updateCourse(@PathVariable Long id, @Valid @RequestBody CourseDto courseRequest) {
         try {
             Course course = courseService.updateCourse(id, courseRequest);
             return ResponseEntity.ok(course);
@@ -125,41 +125,6 @@ public class CourseController {
         }
     }
 
-    @GetMapping("/admin/dashboard/stats")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> getDashboardStats() {
-        try {
-            Map<String, Object> stats = courseService.getDashboardStats();
-            return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
-    // Lecturer endpoints
-    @GetMapping("/lecturer/courses")
-    @PreAuthorize("hasRole('LECTURER')")
-    public ResponseEntity<List<Course>> getLecturerCourses() {
-        // For now, return all courses. This should be filtered by current lecturer
-        List<Course> courses = courseService.getAllCourses();
-        return ResponseEntity.ok(courses);
-    }
-
-    @GetMapping("/lecturer/courses/{id}")
-    @PreAuthorize("hasRole('LECTURER')")
-    public ResponseEntity<?> getCourse(@PathVariable Long id) {
-        try {
-            Course course = courseService.getCourseById(id);
-            return ResponseEntity.ok(course);
-        } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
     // Student endpoints
     @GetMapping("/student/courses")
     @PreAuthorize("hasRole('STUDENT')")
@@ -201,6 +166,20 @@ public class CourseController {
             Boolean active = (Boolean) statusData.get("active");
             Map<String, Object> updatedLecturer = courseService.updateLecturerStatus(id, active);
             return ResponseEntity.ok(updatedLecturer);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/admin/courses/{id}/assign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> assignLecturerToCourse(@PathVariable Long id, @RequestBody Map<String, Long> request) {
+        try {
+            Long lecturerId = request.get("lecturerId");
+            Course course = courseService.assignLecturerToCourse(id, lecturerId);
+            return ResponseEntity.ok(course);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
             response.put("message", e.getMessage());

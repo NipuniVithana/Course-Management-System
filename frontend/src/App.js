@@ -19,6 +19,11 @@ import Degrees from './components/admin/Degrees';
 import Courses from './components/admin/Courses';
 import AddCourse from './components/admin/AddCourse';
 
+// Lecturer Components
+import AllCourses from './components/lecturer/AllCourses';
+import MyCourses from './components/lecturer/MyCourses';
+import CourseManagement from './components/lecturer/CourseManagement';
+
 // Common Components
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Layout from './components/common/Layout';
@@ -115,6 +120,27 @@ function App() {
         } />
 
         {/* Lecturer Routes */}
+        <Route path="/lecturer/browse-courses" element={
+          <ProtectedRoute allowedRoles={['LECTURER']}>
+            <Layout>
+              <AllCourses />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/lecturer/my-courses" element={
+          <ProtectedRoute allowedRoles={['LECTURER']}>
+            <Layout>
+              <MyCourses />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/lecturer/course/:courseId" element={
+          <ProtectedRoute allowedRoles={['LECTURER']}>
+            <Layout>
+              <CourseManagement />
+            </Layout>
+          </ProtectedRoute>
+        } />
         <Route path="/lecturer/*" element={
           <ProtectedRoute allowedRoles={['LECTURER']}>
             <Layout>

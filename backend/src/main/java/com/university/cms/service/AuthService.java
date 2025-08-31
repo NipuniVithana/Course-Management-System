@@ -101,8 +101,12 @@ public class AuthService {
             case "LECTURER":
                 Lecturer lecturer = new Lecturer();
                 lecturer.setUser(savedUser);
-                lecturer.setLecturerId(registerRequest.getLecturerId());
+                lecturer.setFirstName(registerRequest.getFirstName());
+                lecturer.setLastName(registerRequest.getLastName());
+                lecturer.setEmployeeId(registerRequest.getLecturerId());
                 lecturer.setDepartment(registerRequest.getDepartment());
+                lecturer.setPhone(registerRequest.getPhone());
+                lecturer.setOfficeLocation(registerRequest.getOfficeLocation());
                 lecturer.setCreatedAt(LocalDateTime.now());
                 lecturer.setUpdatedAt(LocalDateTime.now());
                 lecturerRepository.save(lecturer);
@@ -111,8 +115,11 @@ public class AuthService {
             case "STUDENT":
                 Student student = new Student();
                 student.setUser(savedUser);
+                student.setFirstName(registerRequest.getFirstName());
+                student.setLastName(registerRequest.getLastName());
                 student.setStudentId(registerRequest.getStudentId());
-                student.setDepartment(registerRequest.getDepartment());
+                student.setPhone(registerRequest.getPhone());
+                student.setProgram(registerRequest.getProgram());
                 student.setCreatedAt(LocalDateTime.now());
                 student.setUpdatedAt(LocalDateTime.now());
                 studentRepository.save(student);

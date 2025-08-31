@@ -1,6 +1,6 @@
 package com.university.cms.service;
 
-import com.university.cms.dto.CourseRequest;
+import com.university.cms.dto.CourseDto;
 import com.university.cms.entity.Course;
 import com.university.cms.entity.Degree;
 import com.university.cms.entity.Lecturer;
@@ -57,7 +57,7 @@ public class CourseService {
                 .orElseThrow(() -> new RuntimeException("Course not found with id: " + id));
     }
 
-    public Course createCourse(CourseRequest courseRequest) {
+    public Course createCourse(CourseDto courseRequest) {
         // Check if course code already exists
         if (courseRepository.findByCourseCode(courseRequest.getCourseCode()).isPresent()) {
             throw new RuntimeException("Course with code " + courseRequest.getCourseCode() + " already exists");
@@ -94,7 +94,7 @@ public class CourseService {
         return courseRepository.save(course);
     }
 
-    public Course updateCourse(Long id, CourseRequest courseRequest) {
+    public Course updateCourse(Long id, CourseDto courseRequest) {
         Course course = getCourseById(id);
 
         // Handle lecturer assignment/update with null checks
@@ -126,10 +126,6 @@ public class CourseService {
     public void deleteCourse(Long id) {
         Course course = getCourseById(id);
         courseRepository.delete(course);
-    }
-
-    public List<Course> getCoursesByLecturer(Long lecturerId) {
-        return courseRepository.findByLecturerId(lecturerId);
     }
 
     // Admin methods for lecturer management
@@ -334,5 +330,70 @@ public class CourseService {
         stats.put("totalStudents", studentRepository.count());
         stats.put("totalDegrees", degreeService.getAllDegrees().size());
         return stats;
+    }
+
+    public Course assignLecturerToCourse(Long courseId, Long lecturerId) {
+        Course course = getCourseById(courseId);
+        
+        if (lecturerId != null) {
+            Lecturer lecturer = lecturerRepository.findById(lecturerId)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found with id: " + lecturerId));
+            course.setLecturer(lecturer);
+        } else {
+            // Remove lecturer assignment
+            course.setLecturer(null);
+        }
+        
+        course.setUpdatedAt(LocalDateTime.now());
+        return courseRepository.save(course);
+    }
+
+    // Lecturer-specific methods
+    public List<Map<String, Object>> getAvailableCoursesForLecturer(Lecturer lecturer) {
+        List<Course> allCourses = courseRepository.findAll();
+        return allCourses.stream()
+                .map(course -> {
+                    Map<String, Object> courseData = new HashMap<>();
+                    courseData.put("id", course.getId());
+                    courseData.put("courseCode", course.getCourseCode());
+                    courseData.put("title", course.getTitle());
+                    courseData.put("department", course.getDepartment());
+                    courseData.put("credits", course.getCredits());
+                    courseData.put("capacity", course.getCapacity());
+                    courseData.put("status", course.getStatus());
+                    courseData.put("description", course.getDescription());
+                    
+                    // Add degree information
+                    if (course.getDegree() != null) {
+                        courseData.put("degreeName", course.getDegree().getName());
+                        courseData.put("degreeId", course.getDegree().getId());
+                    } else {
+                        courseData.put("degreeName", null);
+                        courseData.put("degreeId", null);
+                    }
+                    
+                    // Add lecturer information
+                    if (course.getLecturer() != null) {
+                        courseData.put("lecturerName", course.getLecturer().getFirstName() + " " + course.getLecturer().getLastName());
+                        courseData.put("lecturerId", course.getLecturer().getId());
+                        courseData.put("isAssigned", course.getLecturer().getId().equals(lecturer.getId()));
+                    } else {
+                        courseData.put("lecturerName", null);
+                        courseData.put("lecturerId", null);
+                        courseData.put("isAssigned", false);
+                    }
+                    
+                    return courseData;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<Course> getCoursesByLecturer(Lecturer lecturer) {
+        return courseRepository.findByLecturer(lecturer);
+    }
+
+    public boolean isLecturerAssignedToCourse(Lecturer lecturer, Long courseId) {
+        Course course = getCourseById(courseId);
+        return course.getLecturer() != null && course.getLecturer().getId().equals(lecturer.getId());
     }
 }

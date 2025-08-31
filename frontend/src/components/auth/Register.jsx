@@ -240,6 +240,20 @@ const Register = () => {
                     </Row>
                   ) : role === 'LECTURER' ? (
                     <Row gutter={16}>
+                      <Col span={24}>
+                        <Form.Item
+                          name="lecturerId"
+                          label="Employee ID"
+                          rules={[{ required: true, message: 'Please input your employee ID!' }]}
+                        >
+                          <Input
+                            prefix={<IdcardOutlined />}
+                            placeholder="Employee ID"
+                            size="large"
+                            disabled={loading}
+                          />
+                        </Form.Item>
+                      </Col>
                       <Col span={12}>
                         <Form.Item
                           name="department"

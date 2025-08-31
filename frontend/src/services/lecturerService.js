@@ -94,7 +94,64 @@ const lecturerService = {
       responseType: 'blob'
     });
     return response.data;
-  }
+  },
+
+  // Course Browsing and Requests
+  getAllAvailableCourses: async () => {
+    const response = await api.get('/lecturer/courses/available');
+    return response.data;
+  },
+
+  registerToCourse: async (courseId) => {
+    const response = await api.post(`/lecturer/courses/${courseId}/register`);
+    return response.data;
+  },
+
+  // Course Materials
+  getCourseMaterials: async (courseId) => {
+    const response = await api.get(`/lecturer/courses/${courseId}/materials`);
+    return response.data;
+  },
+
+  uploadCourseMaterial: async (courseId, materialData) => {
+    const formData = new FormData();
+    formData.append('title', materialData.title);
+    formData.append('description', materialData.description || '');
+    if (materialData.file && materialData.file.fileList && materialData.file.fileList[0]) {
+      formData.append('file', materialData.file.fileList[0].originFileObj);
+    }
+    
+    const response = await api.post(`/lecturer/courses/${courseId}/materials`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  updateCourseMaterial: async (courseId, materialId, materialData) => {
+    const formData = new FormData();
+    formData.append('title', materialData.title);
+    formData.append('description', materialData.description || '');
+    
+    const response = await api.put(`/lecturer/courses/${courseId}/materials/${materialId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  deleteCourseMaterial: async (courseId, materialId) => {
+    const response = await api.delete(`/lecturer/courses/${courseId}/materials/${materialId}`);
+    return response.data;
+  },
+
+  // Student Grading
+  updateStudentGrade: async (courseId, studentId, gradeData) => {
+    const response = await api.put(`/lecturer/courses/${courseId}/students/${studentId}/grade`, gradeData);
+    return response.data;
+  },
 };
 
 export default lecturerService;

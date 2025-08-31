@@ -29,6 +29,9 @@ public class RegisterRequest {
     private String studentId;
     private String lecturerId;
     private String department;
+    private String phone;
+    private String officeLocation;
+    private String program;
     
     public RegisterRequest() {}
     
@@ -94,5 +97,29 @@ public class RegisterRequest {
     
     public void setDepartment(String department) {
         this.department = department;
+    }
+    
+    public String getPhone() {
+        return phone;
+    }
+    
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+    
+    public String getOfficeLocation() {
+        return officeLocation;
+    }
+    
+    public void setOfficeLocation(String officeLocation) {
+        this.officeLocation = officeLocation;
+    }
+    
+    public String getProgram() {
+        return program;
+    }
+    
+    public void setProgram(String program) {
+        this.program = program;
     }
 }

@@ -15,7 +15,6 @@ import {
   BankOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  EditOutlined,
   ProfileOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
@@ -66,6 +65,13 @@ const Layout = ({ children }) => {
         break;
       case 'all-courses':
         navigate('/admin/courses');
+        break;
+      // Lecturer navigation
+      case 'browse-courses':
+        navigate('/lecturer/browse-courses');
+        break;
+      case 'my-courses':
+        navigate('/lecturer/my-courses');
         break;
       default:
         console.log('Menu item clicked:', key);
@@ -147,46 +153,14 @@ const Layout = ({ children }) => {
         return [
           ...baseItems,
           {
+            key: 'browse-courses',
+            icon: <BookOutlined />,
+            label: 'All Courses',
+          },
+          {
             key: 'my-courses',
             icon: <BookOutlined />,
             label: 'My Courses',
-          },
-          {
-            key: 'students',
-            icon: <TeamOutlined />,
-            label: 'My Students',
-          },
-          {
-            key: 'assignments',
-            icon: <FileTextOutlined />,
-            label: 'Assignments',
-            children: [
-              {
-                key: 'view-assignments',
-                icon: <ReadOutlined />,
-                label: 'View Assignments',
-              },
-              {
-                key: 'create-assignment',
-                icon: <EditOutlined />,
-                label: 'Create Assignment',
-              },
-              {
-                key: 'grade-assignments',
-                icon: <BarChartOutlined />,
-                label: 'Grade Assignments',
-              },
-            ],
-          },
-          {
-            key: 'schedule',
-            icon: <CalendarOutlined />,
-            label: 'Schedule',
-          },
-          {
-            key: 'materials',
-            icon: <BankOutlined />,
-            label: 'Course Materials',
           },
         ];
 
