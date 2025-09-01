@@ -1,12 +1,14 @@
 package com.university.cms.service;
 
 import com.university.cms.entity.Assignment;
+import com.university.cms.entity.AssignmentSubmission;
 import com.university.cms.entity.CourseMaterial;
 import com.university.cms.entity.Lecturer;
 import com.university.cms.entity.User;
 import com.university.cms.entity.Course;
 import com.university.cms.entity.Enrollment;
 import com.university.cms.repository.AssignmentRepository;
+import com.university.cms.repository.AssignmentSubmissionRepository;
 import com.university.cms.repository.CourseMaterialRepository;
 import com.university.cms.repository.LecturerRepository;
 import com.university.cms.repository.CourseRepository;
@@ -45,6 +47,9 @@ public class LecturerService {
     
     @Autowired
     private AssignmentRepository assignmentRepository;
+    
+    @Autowired
+    private AssignmentSubmissionRepository assignmentSubmissionRepository;
     
     @Autowired
     private CourseMaterialRepository courseMaterialRepository;
@@ -278,10 +283,10 @@ public class LecturerService {
             String grade = enrollment.getFinalGrade().trim();
             try {
                 double numericGrade = Double.parseDouble(grade);
-                if (numericGrade >= 0 && numericGrade <= 100) { // Valid numeric grade
+                if (numericGrade >= 0 && numericGrade <= 100) // Valid numeric grade
                     totalPoints += numericGrade;
                     validGrades++;
-                }
+                
             } catch (NumberFormatException e) {
                 // Skip invalid grades
                 System.out.println("Invalid grade format: " + grade);
@@ -705,6 +710,97 @@ public class LecturerService {
             
         } catch (Exception e) {
             throw new RuntimeException("Failed to change password: " + e.getMessage());
+        }
+    }
+    
+    // Assignment submission management methods
+    public List<Map<String, Object>> getAssignmentSubmissions(Long assignmentId) {
+        List<AssignmentSubmission> submissions = assignmentSubmissionRepository.findByAssignmentId(assignmentId);
+        return submissions.stream().map(this::convertSubmissionToMap).collect(Collectors.toList());
+    }
+    
+    public List<Map<String, Object>> getCourseSubmissions(Long courseId) {
+        List<AssignmentSubmission> submissions = assignmentSubmissionRepository.findByAssignmentCourseId(courseId);
+        return submissions.stream().map(this::convertSubmissionToMap).collect(Collectors.toList());
+    }
+    
+    public Long getCourseIdBySubmissionId(Long submissionId) {
+        AssignmentSubmission submission = assignmentSubmissionRepository.findById(submissionId)
+                .orElseThrow(() -> new RuntimeException("Submission not found"));
+        return submission.getAssignment().getCourse().getId();
+    }
+    
+    public ResponseEntity<byte[]> downloadSubmissionFile(Long submissionId) {
+        try {
+            AssignmentSubmission submission = assignmentSubmissionRepository.findById(submissionId)
+                    .orElseThrow(() -> new RuntimeException("Submission not found"));
+            
+            if (submission.getFilePath() == null) {
+                throw new RuntimeException("No file associated with this submission");
+            }
+            
+            Path filePath = Paths.get(submission.getFilePath());
+            if (!Files.exists(filePath)) {
+                throw new RuntimeException("File not found on server");
+            }
+            
+            byte[] fileContent = Files.readAllBytes(filePath);
+            
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=\"" + submission.getFileName() + "\"")
+                    .header("Content-Type", "application/octet-stream")
+                    .body(fileContent);
+                    
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to download submission file: " + e.getMessage());
+        }
+    }
+    
+    private Map<String, Object> convertSubmissionToMap(AssignmentSubmission submission) {
+        Map<String, Object> submissionData = new HashMap<>();
+        submissionData.put("id", submission.getId());
+        submissionData.put("studentId", submission.getStudent().getStudentId());
+        submissionData.put("studentName", submission.getStudent().getFirstName() + " " + submission.getStudent().getLastName());
+        submissionData.put("assignmentName", submission.getAssignment().getTitle());
+        submissionData.put("submissionText", submission.getSubmissionText());
+        submissionData.put("fileName", submission.getFileName());
+        submissionData.put("fileSize", submission.getFileSize());
+        submissionData.put("submittedAt", submission.getSubmittedAt().toString());
+        submissionData.put("grade", submission.getGrade());
+        submissionData.put("feedback", submission.getFeedback());
+        submissionData.put("gradedAt", submission.getGradedAt() != null ? submission.getGradedAt().toString() : null);
+        return submissionData;
+    }
+
+    // Assignment submission grading method
+    public void gradeSubmission(Long submissionId, Map<String, Object> gradeData) {
+        try {
+            AssignmentSubmission submission = assignmentSubmissionRepository.findById(submissionId)
+                    .orElseThrow(() -> new RuntimeException("Submission not found"));
+            
+            // Update grade and feedback
+            if (gradeData.containsKey("grade")) {
+                Object gradeValue = gradeData.get("grade");
+                if (gradeValue instanceof Number) {
+                    submission.setGrade(((Number) gradeValue).doubleValue());
+                } else if (gradeValue instanceof String) {
+                    try {
+                        submission.setGrade(Double.parseDouble((String) gradeValue));
+                    } catch (NumberFormatException e) {
+                        throw new RuntimeException("Invalid grade format");
+                    }
+                }
+            }
+            
+            if (gradeData.containsKey("feedback")) {
+                submission.setFeedback(gradeData.get("feedback").toString());
+            }
+            
+            submission.setGradedAt(LocalDateTime.now());
+            
+            assignmentSubmissionRepository.save(submission);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to grade submission: " + e.getMessage());
         }
     }
 }

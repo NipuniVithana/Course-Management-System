@@ -109,6 +109,18 @@ const lecturerService = {
     return response.data;
   },
 
+  getCourseSubmissions: async (courseId) => {
+    const response = await api.get(`/lecturer/courses/${courseId}/submissions`);
+    return response.data;
+  },
+
+  downloadSubmissionFile: async (submissionId) => {
+    const response = await api.get(`/lecturer/submissions/${submissionId}/download`, {
+      responseType: 'blob',
+    });
+    return response;
+  },
+
   gradeSubmission: async (submissionId, gradeData) => {
     const response = await api.put(`/lecturer/submissions/${submissionId}/grade`, gradeData);
     return response.data;

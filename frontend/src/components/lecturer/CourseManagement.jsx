@@ -58,18 +58,26 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
   const [editAssignmentModal, setEditAssignmentModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionModal, setSubmissionModal] = useState(false);
+  const [selectedAssignmentForSubmission, setSelectedAssignmentForSubmission] = useState(null);
   const [gradeModal, setGradeModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [submissionGradeModal, setSubmissionGradeModal] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [activeTab, setActiveTab] = useState('materials');
   const [form] = Form.useForm();
   const [assignmentForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [editAssignmentForm] = Form.useForm();
+  const [submissionForm] = Form.useForm();
   const [gradeForm] = Form.useForm();
+  const [submissionGradeForm] = Form.useForm();
 
   // Role-based configuration
   const isStudent = userRole === 'STUDENT';
   const [studentGrade, setStudentGrade] = useState(null);
+  const [studentSubmissions, setStudentSubmissions] = useState({}); // Map of assignmentId -> submission data
 
   useEffect(() => {
     const loadData = async () => {
@@ -90,8 +98,10 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
             setStudentGrade(gradesData);
             // Students can view assignments but not edit them
             try {
-              const assignmentsData = await lecturerService.getAssignments(courseId);
+              const assignmentsData = await studentService.getCourseAssignments(courseId);
               setAssignments(assignmentsData);
+              // Load student submissions for each assignment
+              await loadStudentSubmissions(assignmentsData);
             } catch (error) {
               console.error('Error loading assignments:', error);
               setAssignments([]);
@@ -108,6 +118,15 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
             setStudents(studentsData);
             setMaterials(materialsData);
             setAssignments(assignmentsData);
+            
+            // Load submissions for lecturers
+            try {
+              const submissionsData = await lecturerService.getCourseSubmissions(courseId);
+              setSubmissions(submissionsData);
+            } catch (error) {
+              console.error('Error loading submissions:', error);
+              setSubmissions([]);
+            }
           }
         } catch (error) {
           console.error('Error loading course data:', error);
@@ -119,7 +138,35 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
     };
     
     loadData();
-  }, [courseId, isStudent]);
+  }, [courseId, isStudent]); // loadStudentSubmissions is defined inside loadData, so no need to add it as dependency
+
+  // Function to load student submissions for all assignments
+  const loadStudentSubmissions = async (assignmentsData) => {
+    if (!isStudent || !assignmentsData || assignmentsData.length === 0) {
+      return;
+    }
+
+    try {
+      const submissionsMap = {};
+      
+      // Load submission data for each assignment
+      for (const assignment of assignmentsData) {
+        try {
+          const submissionData = await studentService.getSubmission(assignment.id);
+          if (submissionData) {
+            submissionsMap[assignment.id] = submissionData;
+          }
+        } catch (error) {
+          // No submission found for this assignment, which is normal
+          console.log(`No submission found for assignment ${assignment.id}`);
+        }
+      }
+      
+      setStudentSubmissions(submissionsMap);
+    } catch (error) {
+      console.error('Error loading student submissions:', error);
+    }
+  };
 
   const loadCourseData = async () => {
     try {
@@ -135,8 +182,10 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
         setStudentGrade(gradesData);
         // Students can view assignments but not edit them
         try {
-          const assignmentsData = await lecturerService.getAssignments(courseId);
+          const assignmentsData = await studentService.getCourseAssignments(courseId);
           setAssignments(assignmentsData);
+          // Reload student submissions
+          await loadStudentSubmissions(assignmentsData);
         } catch (error) {
           console.error('Error loading assignments:', error);
           setAssignments([]);
@@ -151,6 +200,15 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
         setStudents(studentsData);
         setMaterials(materialsData);
         setAssignments(assignmentsData);
+        
+        // Load submissions for lecturers
+        try {
+          const submissionsData = await lecturerService.getCourseSubmissions(courseId);
+          setSubmissions(submissionsData);
+        } catch (error) {
+          console.error('Error loading submissions:', error);
+          setSubmissions([]);
+        }
       }
     } catch (error) {
       console.error('Error loading course data:', error);
@@ -252,11 +310,14 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
 
   const handleDownloadAssignmentFile = async (assignment) => {
     try {
-      const response = await lecturerService.downloadAssignmentFile(assignment.id);
+      const response = isStudent 
+        ? await studentService.downloadAssignmentFile(assignment.id)
+        : await lecturerService.downloadAssignmentFile(assignment.id);
+      
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.download = assignment.fileName;
+      link.download = assignment.fileName || 'assignment_file';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -265,6 +326,74 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
     } catch (error) {
       console.error('Error downloading file:', error);
       message.error('Failed to download file');
+    }
+  };
+
+  // Submission handlers
+  const handleSubmitAssignment = (assignment) => {
+    setSelectedAssignmentForSubmission(assignment);
+    
+    // Check if student has existing submission
+    const existingSubmission = studentSubmissions[assignment.id];
+    if (existingSubmission) {
+      // Pre-populate form with existing submission data
+      submissionForm.setFieldsValue({
+        submissionText: existingSubmission.submissionText || ''
+      });
+    } else {
+      // Clear form for new submission
+      submissionForm.resetFields();
+    }
+    
+    setSubmissionModal(true);
+  };
+
+  const handleCreateSubmission = async (values) => {
+    try {
+      const submissionData = {
+        submissionText: values.submissionText
+      };
+      
+      // Handle file upload
+      if (values.file && values.file.fileList && values.file.fileList.length > 0) {
+        submissionData.file = values.file.fileList[0].originFileObj;
+      }
+      
+      await studentService.submitAssignment(selectedAssignmentForSubmission.id, submissionData);
+      message.success('Assignment submitted successfully');
+      setSubmissionModal(false);
+      submissionForm.resetFields();
+      setSelectedAssignmentForSubmission(null);
+      
+      // Reload student submissions to update the UI
+      await loadStudentSubmissions(assignments);
+    } catch (error) {
+      console.error('Error submitting assignment:', error);
+      message.error('Failed to submit assignment');
+    }
+  };
+
+  // Handle tab changes
+  const handleTabChange = (activeKey) => {
+    setActiveTab(activeKey);
+    // No need to load submissions here since they're loaded automatically
+  };
+
+  const handleDownloadSubmission = async (submission) => {
+    try {
+      const response = await lecturerService.downloadSubmissionFile(submission.id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = submission.fileName || 'submission_file';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success('File downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading submission:', error);
+      message.error('Failed to download submission');
     }
   };
 
@@ -292,6 +421,39 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
     } catch (error) {
       console.error('Error updating grade:', error);
       message.error('Failed to update grade');
+    }
+  };
+
+  // Submission grading handlers
+  const showSubmissionGradeModal = (submission) => {
+    setSelectedSubmission(submission);
+    submissionGradeForm.setFieldsValue({
+      grade: submission.grade || '',
+      feedback: submission.feedback || ''
+    });
+    setSubmissionGradeModal(true);
+  };
+
+  const handleGradeSubmission = async (values) => {
+    try {
+      await lecturerService.gradeSubmission(selectedSubmission.id, values);
+      
+      // Update the local submissions state immediately
+      setSubmissions(prevSubmissions => 
+        prevSubmissions.map(submission => 
+          submission.id === selectedSubmission.id 
+            ? { ...submission, grade: values.grade, feedback: values.feedback, gradedAt: new Date().toISOString() }
+            : submission
+        )
+      );
+      
+      message.success('Submission graded successfully');
+      setSubmissionGradeModal(false);
+      submissionGradeForm.resetFields();
+      setSelectedSubmission(null);
+    } catch (error) {
+      console.error('Error grading submission:', error);
+      message.error('Failed to grade submission');
     }
   };
 
@@ -464,7 +626,7 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
 
       {/* Main Content Tabs */}
       <Card>
-        <Tabs activeKey={activeTab} onChange={setActiveTab} size="large">
+        <Tabs activeKey={activeTab} onChange={handleTabChange} size="large">
           <TabPane 
             tab={
               <span>
@@ -674,6 +836,44 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
                               Download File
                             </Button>
                           )}
+                          {isStudent && (() => {
+                            const submission = studentSubmissions[assignment.id];
+                            if (submission) {
+                              // Student has already submitted
+                              return (
+                                <Space direction="vertical" style={{ marginTop: '8px' }}>
+                                  <Tag color="green" style={{ fontSize: '12px' }}>
+                                    ✅ Submitted on {new Date(submission.submittedAt).toLocaleDateString()}
+                                  </Tag>
+                                  {submission.grade && (
+                                    <Tag color="blue" style={{ fontSize: '12px' }}>
+                                      Grade: {submission.grade}%
+                                    </Tag>
+                                  )}
+                                  <Button
+                                    type="default"
+                                    size="small"
+                                    onClick={() => handleSubmitAssignment(assignment)}
+                                    style={{ marginTop: '4px' }}
+                                  >
+                                    Edit Submission
+                                  </Button>
+                                </Space>
+                              );
+                            } else {
+                              // Student hasn't submitted yet
+                              return (
+                                <Button
+                                  type="primary"
+                                  size="small"
+                                  onClick={() => handleSubmitAssignment(assignment)}
+                                  style={{ marginTop: '8px' }}
+                                >
+                                  Submit Assignment
+                                </Button>
+                              );
+                            }
+                          })()}
                         </Space>
                       }
                     />
@@ -683,6 +883,107 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
               locale={{ emptyText: 'No assignments created yet' }}
             />
           </TabPane>
+
+          {!isStudent && (
+            <TabPane 
+              tab={
+                <span>
+                  <FileTextOutlined />
+                  Submissions ({submissions.length})
+                </span>
+              } 
+              key="submissions"
+            >
+              <Table
+                columns={[
+                  {
+                    title: 'Student ID',
+                    dataIndex: 'studentId',
+                    key: 'studentId',
+                    width: 120,
+                  },
+                  {
+                    title: 'Student Name',
+                    dataIndex: 'studentName',
+                    key: 'studentName',
+                    width: 150,
+                  },
+                  {
+                    title: 'Assignment',
+                    dataIndex: 'assignmentName',
+                    key: 'assignmentName',
+                    width: 200,
+                  },
+                  {
+                    title: 'Submitted At',
+                    dataIndex: 'submittedAt',
+                    key: 'submittedAt',
+                    width: 180,
+                    render: (date) => new Date(date).toLocaleString(),
+                  },
+                  {
+                    title: 'File',
+                    key: 'file',
+                    width: 120,
+                    render: (_, record) => (
+                      record.fileName ? (
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<DownloadOutlined />}
+                          onClick={() => handleDownloadSubmission(record)}
+                        >
+                          Download
+                        </Button>
+                      ) : (
+                        <Text type="secondary">No file</Text>
+                      )
+                    ),
+                  },
+                  {
+                    title: 'Grade',
+                    dataIndex: 'grade',
+                    key: 'grade',
+                    width: 100,
+                    render: (grade) => grade ? `${grade}%` : 'Not graded',
+                  },
+                  {
+                    title: 'Action',
+                    key: 'action',
+                    width: 120,
+                    render: (_, record) => (
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => showSubmissionGradeModal(record)}
+                      >
+                        {record.grade ? 'Edit Grade' : 'Grade'}
+                      </Button>
+                    ),
+                  }
+                ]}
+                dataSource={submissions}
+                rowKey="id"
+                scroll={{ x: 1000 }}
+                expandable={{
+                  expandedRowRender: (record) => (
+                    <div style={{ padding: '16px' }}>
+                      <Title level={5}>Submission Text:</Title>
+                      <p>{record.submissionText || 'No text submission'}</p>
+                      {record.feedback && (
+                        <>
+                          <Title level={5}>Feedback:</Title>
+                          <p>{record.feedback}</p>
+                        </>
+                      )}
+                    </div>
+                  ),
+                  rowExpandable: (record) => record.submissionText || record.feedback,
+                }}
+              />
+            </TabPane>
+          )}
 
           <TabPane 
             tab={
@@ -1150,6 +1451,162 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
         </Form>
       </Modal>
         </>
+      )}
+
+      {/* Student Submission Modal */}
+      {isStudent && (
+        <Modal
+          title={`${studentSubmissions[selectedAssignmentForSubmission?.id] ? 'Edit' : 'Submit'} Assignment: ${selectedAssignmentForSubmission?.title}`}
+          open={submissionModal}
+          onCancel={() => {
+            setSubmissionModal(false);
+            setSelectedAssignmentForSubmission(null);
+            submissionForm.resetFields();
+          }}
+          width={600}
+          footer={[
+            <Button key="cancel" onClick={() => {
+              setSubmissionModal(false);
+              setSelectedAssignmentForSubmission(null);
+              submissionForm.resetFields();
+            }}>
+              Cancel
+            </Button>,
+            <Button key="submit" type="primary" onClick={submissionForm.submit}>
+              {studentSubmissions[selectedAssignmentForSubmission?.id] ? 'Update Submission' : 'Submit Assignment'}
+            </Button>
+          ]}
+        >
+          <Form
+            form={submissionForm}
+            layout="vertical"
+            onFinish={handleCreateSubmission}
+          >
+            <Form.Item
+              name="submissionText"
+              label="Submission Text"
+              rules={[{ required: true, message: 'Please enter your submission text' }]}
+            >
+              <TextArea 
+                rows={6} 
+                placeholder="Enter your assignment submission text here..."
+              />
+            </Form.Item>
+            <Form.Item
+              name="file"
+              label="Upload File (Optional)"
+            >
+              <Upload.Dragger
+                beforeUpload={() => false}
+                maxCount={1}
+                accept=".pdf,.doc,.docx,.txt,.zip,.rar"
+              >
+                <p className="ant-upload-drag-icon">
+                  <UploadOutlined />
+                </p>
+                <p className="ant-upload-text">Click or drag file to upload</p>
+                <p className="ant-upload-hint">
+                  Support for PDF, DOC, TXT, ZIP files (Max: 50MB)
+                </p>
+              </Upload.Dragger>
+            </Form.Item>
+          </Form>
+        </Modal>
+      )}
+
+      {/* Submission Grading Modal */}
+      {!isStudent && (
+        <Modal
+          title={`Grade Submission - ${selectedSubmission?.studentName}`}
+          open={submissionGradeModal}
+          onOk={submissionGradeForm.submit}
+          onCancel={() => {
+            setSubmissionGradeModal(false);
+            setSelectedSubmission(null);
+            submissionGradeForm.resetFields();
+          }}
+          width={600}
+        >
+          <Form
+            form={submissionGradeForm}
+            layout="vertical"
+            onFinish={handleGradeSubmission}
+          >
+            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+              <Text strong>Assignment: </Text>
+              <Text>{selectedSubmission?.assignmentName}</Text>
+              <br />
+              <Text strong>Student: </Text>
+              <Text>{selectedSubmission?.studentName}</Text>
+              <br />
+              <Text strong>Submitted: </Text>
+              <Text>{selectedSubmission?.submittedAt ? new Date(selectedSubmission.submittedAt).toLocaleString() : 'N/A'}</Text>
+            </div>
+            
+            {selectedSubmission?.submissionText && (
+              <div style={{ marginBottom: '16px' }}>
+                <Text strong>Submission Text:</Text>
+                <div style={{ 
+                  marginTop: '8px', 
+                  padding: '12px', 
+                  border: '1px solid #d9d9d9', 
+                  borderRadius: '6px', 
+                  backgroundColor: '#fafafa',
+                  maxHeight: '150px',
+                  overflowY: 'auto'
+                }}>
+                  <Text>{selectedSubmission.submissionText}</Text>
+                </div>
+              </div>
+            )}
+            
+            {selectedSubmission?.fileName && (
+              <div style={{ marginBottom: '16px' }}>
+                <Text strong>Attached File: </Text>
+                <Button
+                  type="link"
+                  icon={<DownloadOutlined />}
+                  onClick={() => handleDownloadSubmission(selectedSubmission)}
+                  style={{ padding: 0, marginLeft: '8px' }}
+                >
+                  {selectedSubmission.fileName}
+                </Button>
+              </div>
+            )}
+            
+            <Form.Item
+              name="grade"
+              label="Grade (%)"
+              rules={[
+                { required: true, message: 'Please enter grade' },
+                { 
+                  validator: (_, value) => {
+                    if (value === null || value === undefined) {
+                      return Promise.reject(new Error('Please enter grade'));
+                    }
+                    if (value < 0 || value > 100) {
+                      return Promise.reject(new Error('Grade must be between 0 and 100'));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
+            >
+              <InputNumber 
+                min={0} 
+                max={100} 
+                style={{ width: '100%' }}
+                placeholder="Enter grade (0-100)" 
+              />
+            </Form.Item>
+            <Form.Item
+              name="feedback"
+              label="Feedback"
+            >
+              <TextArea rows={4} placeholder="Enter feedback for student" />
+            </Form.Item>
+          </Form>
+        </Modal>
       )}
     </div>
   );

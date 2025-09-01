@@ -3,10 +3,16 @@ package com.university.cms.service;
 import com.university.cms.entity.*;
 import com.university.cms.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +31,12 @@ public class StudentService {
     
     @Autowired
     private CourseRepository courseRepository;
+    
+    @Autowired
+    private AssignmentRepository assignmentRepository;
+    
+    @Autowired
+    private AssignmentSubmissionRepository assignmentSubmissionRepository;
     
     @Autowired
     private LecturerService lecturerService;
@@ -260,5 +272,130 @@ public class StudentService {
     
     public long getTotalStudentCount() {
         return studentRepository.count();
+    }
+    
+    // Assignment-related methods for students
+    public List<Assignment> getCourseAssignments(Long courseId) {
+        return assignmentRepository.findByCourseId(courseId);
+    }
+    
+    public boolean isStudentEnrolledInCourse(Student student, Long courseId) {
+        return enrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId).isPresent();
+    }
+    
+    public Long getCourseIdByAssignmentId(Long assignmentId) {
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+        return assignment.getCourse().getId();
+    }
+    
+    public ResponseEntity<byte[]> downloadAssignmentFile(Long assignmentId) {
+        try {
+            Assignment assignment = assignmentRepository.findById(assignmentId)
+                    .orElseThrow(() -> new RuntimeException("Assignment not found"));
+            
+            if (assignment.getFilePath() == null) {
+                throw new RuntimeException("No file associated with this assignment");
+            }
+            
+            Path filePath = Paths.get(assignment.getFilePath());
+            if (!Files.exists(filePath)) {
+                throw new RuntimeException("File not found on server");
+            }
+            
+            byte[] fileContent = Files.readAllBytes(filePath);
+            
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=\"" + assignment.getFileName() + "\"")
+                    .header("Content-Type", "application/octet-stream")
+                    .body(fileContent);
+                    
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to download assignment file: " + e.getMessage());
+        }
+    }
+    
+    // Assignment submission methods
+    @Transactional
+    public void submitAssignment(Long assignmentId, Student student, String submissionText, MultipartFile file) {
+        try {
+            Assignment assignment = assignmentRepository.findById(assignmentId)
+                    .orElseThrow(() -> new RuntimeException("Assignment not found"));
+            
+            // Check if student already submitted this assignment
+            Optional<AssignmentSubmission> existingSubmission = 
+                    assignmentSubmissionRepository.findByAssignmentIdAndStudentId(assignmentId, student.getId());
+            
+            AssignmentSubmission submission;
+            if (existingSubmission.isPresent()) {
+                // Update existing submission
+                submission = existingSubmission.get();
+                submission.setSubmissionText(submissionText);
+                
+                // Delete old file if exists and new file is provided
+                if (file != null && !file.isEmpty() && submission.getFilePath() != null) {
+                    try {
+                        Files.deleteIfExists(Paths.get(submission.getFilePath()));
+                    } catch (IOException e) {
+                        System.err.println("Failed to delete old submission file: " + e.getMessage());
+                    }
+                }
+            } else {
+                // Create new submission
+                submission = new AssignmentSubmission();
+                submission.setAssignment(assignment);
+                submission.setStudent(student);
+                submission.setSubmissionText(submissionText);
+            }
+            
+            // Handle file upload if present
+            if (file != null && !file.isEmpty()) {
+                String fileName = file.getOriginalFilename();
+                String uploadDir = "uploads/submissions/";
+                
+                // Create directory if it doesn't exist
+                Path uploadPath = Paths.get(uploadDir);
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+                
+                // Generate unique filename
+                String uniqueFileName = System.currentTimeMillis() + "_" + fileName;
+                Path filePath = uploadPath.resolve(uniqueFileName);
+                
+                // Save file
+                Files.copy(file.getInputStream(), filePath);
+                
+                // Set file information in submission
+                submission.setFileName(fileName);
+                submission.setFilePath(filePath.toString());
+                submission.setFileSize(file.getSize());
+            }
+            
+            assignmentSubmissionRepository.save(submission);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to submit assignment: " + e.getMessage());
+        }
+    }
+    
+    public Map<String, Object> getMySubmission(Long assignmentId, Student student) {
+        Optional<AssignmentSubmission> submission = 
+                assignmentSubmissionRepository.findByAssignmentIdAndStudentId(assignmentId, student.getId());
+        
+        if (submission.isPresent()) {
+            AssignmentSubmission sub = submission.get();
+            Map<String, Object> submissionData = new HashMap<>();
+            submissionData.put("id", sub.getId());
+            submissionData.put("submissionText", sub.getSubmissionText());
+            submissionData.put("fileName", sub.getFileName());
+            submissionData.put("fileSize", sub.getFileSize());
+            submissionData.put("submittedAt", sub.getSubmittedAt().toString());
+            submissionData.put("grade", sub.getGrade());
+            submissionData.put("feedback", sub.getFeedback());
+            submissionData.put("gradedAt", sub.getGradedAt() != null ? sub.getGradedAt().toString() : null);
+            return submissionData;
+        } else {
+            return null; // No submission found
+        }
     }
 }

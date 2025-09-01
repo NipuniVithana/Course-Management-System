@@ -162,6 +162,14 @@ const studentService = {
       },
     });
     return response.data;
+  },
+
+  // Assignment file download for Students
+  downloadAssignmentFile: async (assignmentId) => {
+    const response = await api.get(`/student/assignments/${assignmentId}/download`, {
+      responseType: 'blob',
+    });
+    return response;
   }
 };
 

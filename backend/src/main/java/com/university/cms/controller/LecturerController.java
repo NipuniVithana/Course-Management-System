@@ -424,6 +424,71 @@ public class LecturerController {
         }
     }
 
+    // Assignment submission management endpoints
+    @GetMapping("/assignments/{assignmentId}/submissions")
+    public ResponseEntity<List<Map<String, Object>>> getAssignmentSubmissions(
+            @PathVariable Long assignmentId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this assignment via course
+            Long courseId = lecturerService.getCourseIdByAssignmentId(assignmentId);
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).build();
+            }
+            
+            List<Map<String, Object>> submissions = lecturerService.getAssignmentSubmissions(assignmentId);
+            return ResponseEntity.ok(submissions);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/courses/{courseId}/submissions")
+    public ResponseEntity<List<Map<String, Object>>> getCourseSubmissions(
+            @PathVariable Long courseId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this course
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).build();
+            }
+            
+            List<Map<String, Object>> submissions = lecturerService.getCourseSubmissions(courseId);
+            return ResponseEntity.ok(submissions);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/submissions/{submissionId}/download")
+    public ResponseEntity<byte[]> downloadSubmissionFile(
+            @PathVariable Long submissionId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this submission via course
+            Long courseId = lecturerService.getCourseIdBySubmissionId(submissionId);
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).build();
+            }
+            
+            return lecturerService.downloadSubmissionFile(submissionId);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     // Grade management placeholder
     @PutMapping("/courses/{courseId}/students/{studentId}/grade")
     public ResponseEntity<String> updateStudentGrade(
@@ -435,6 +500,30 @@ public class LecturerController {
             return ResponseEntity.ok("Grade updated successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error updating grade: " + e.getMessage());
+        }
+    }
+
+    // Assignment submission grading endpoint
+    @PutMapping("/submissions/{submissionId}/grade")
+    public ResponseEntity<String> gradeSubmission(
+            @PathVariable Long submissionId,
+            @RequestBody Map<String, Object> gradeData,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this submission via course
+            Long courseId = lecturerService.getCourseIdBySubmissionId(submissionId);
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).body("Access denied");
+            }
+            
+            lecturerService.gradeSubmission(submissionId, gradeData);
+            return ResponseEntity.ok("Submission graded successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error grading submission: " + e.getMessage());
         }
     }
 

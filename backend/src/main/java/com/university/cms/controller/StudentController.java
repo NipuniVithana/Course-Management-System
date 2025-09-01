@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -209,6 +210,107 @@ public class StudentController {
             Map<String, String> response = new HashMap<>();
             response.put("message", "Password changed successfully");
             return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // Assignment endpoints for students
+    @GetMapping("/courses/{courseId}/assignments")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<?> getCourseAssignments(
+            @PathVariable Long courseId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Student student = studentService.getStudentByUser(user);
+            
+            // Verify student is enrolled in this course
+            if (!studentService.isStudentEnrolledInCourse(student, courseId)) {
+                return ResponseEntity.status(403).body("Access denied: Not enrolled in this course");
+            }
+            
+            return ResponseEntity.ok(studentService.getCourseAssignments(courseId));
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/assignments/{assignmentId}/download")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<byte[]> downloadAssignmentFile(
+            @PathVariable Long assignmentId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Student student = studentService.getStudentByUser(user);
+            
+            // Verify student has access to this assignment via course enrollment
+            Long courseId = studentService.getCourseIdByAssignmentId(assignmentId);
+            if (!studentService.isStudentEnrolledInCourse(student, courseId)) {
+                return ResponseEntity.status(403).build();
+            }
+            
+            return studentService.downloadAssignmentFile(assignmentId);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // Assignment submission endpoints
+    @PostMapping("/assignments/{assignmentId}/submit")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<?> submitAssignment(
+            @PathVariable Long assignmentId,
+            @RequestParam(value = "submissionText", required = false) String submissionText,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Student student = studentService.getStudentByUser(user);
+            
+            // Verify student has access to this assignment via course enrollment
+            Long courseId = studentService.getCourseIdByAssignmentId(assignmentId);
+            if (!studentService.isStudentEnrolledInCourse(student, courseId)) {
+                return ResponseEntity.status(403).body("Access denied: Not enrolled in this course");
+            }
+            
+            studentService.submitAssignment(assignmentId, student, submissionText, file);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Assignment submitted successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/assignments/{assignmentId}/submission")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<?> getMySubmission(
+            @PathVariable Long assignmentId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Student student = studentService.getStudentByUser(user);
+            
+            // Verify student has access to this assignment via course enrollment
+            Long courseId = studentService.getCourseIdByAssignmentId(assignmentId);
+            if (!studentService.isStudentEnrolledInCourse(student, courseId)) {
+                return ResponseEntity.status(403).body("Access denied: Not enrolled in this course");
+            }
+            
+            return ResponseEntity.ok(studentService.getMySubmission(assignmentId, student));
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
             response.put("message", e.getMessage());
