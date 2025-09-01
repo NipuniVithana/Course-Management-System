@@ -27,6 +27,7 @@ const { Option } = Select;
 
 const AllCourses = ({ userRole = 'LECTURER' }) => {
   const [courses, setCourses] = useState([]);
+  const [degrees, setDegrees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [degreeFilter, setDegreeFilter] = useState('');
@@ -42,8 +43,27 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
   const service = isStudent ? studentService : lecturerService;
 
   useEffect(() => {
-    loadCourses();
-  }, []);
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [coursesData, degreesData] = await Promise.all([
+          service.getAllAvailableCourses(),
+          service.getAllDegrees()
+        ]);
+        console.log(`${userRole} courses data:`, coursesData);
+        console.log(`${userRole} degrees data:`, degreesData);
+        setCourses(coursesData);
+        setDegrees(degreesData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        message.error('Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [userRole, service]);
 
   const loadCourses = async () => {
     try {
@@ -87,7 +107,7 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
       }
       
       setActionModal(false);
-      loadCourses(); // Reload to update status
+      loadCourses(); // Reload courses to update status
     } catch (error) {
       if (error.errorFields) {
         // Validation error
@@ -98,6 +118,26 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleUnregister = async (course) => {
+    Modal.confirm({
+      title: 'Confirm Unregistration',
+      content: `Are you sure you want to unregister from "${course.title}" (${course.courseCode})?`,
+      okText: 'Yes, Unregister',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await lecturerService.unregisterFromCourse(course.id);
+          message.success('Successfully unregistered from course');
+          loadCourses(); // Reload courses to update status
+        } catch (error) {
+          console.error('Error unregistering from course:', error);
+          message.error('Failed to unregister from course');
+        }
+      }
+    });
   };
 
   // Helper function to get degree name from course data
@@ -120,8 +160,6 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
     const matchesDegree = !degreeFilter || degreeName === degreeFilter;
     return matchesSearch && matchesDegree;
   });
-
-  const degrees = [...new Set(courses.map(course => getDegreeName(course)).filter(Boolean))];
 
   const columns = [
     {
@@ -159,46 +197,76 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
     {
       title: 'Action',
       key: 'action',
-      width: 100,
+      width: 180,
       align: 'center',
       render: (_, record) => {
         
         // For lecturers, check if already registered
         if (!isStudent && record.isRegistered) {
           return (
-            <Button
-              size="small"
-              disabled
-              style={{ color: '#52c41a', borderColor: '#52c41a' }}
-            >
-              Assigned
-            </Button>
+            <Button.Group>
+              <Button
+                size="small"
+                type="primary"
+                disabled
+              >
+                Assigned
+              </Button>
+              <Button
+                size="small"
+                danger
+                onClick={() => handleUnregister(record)}
+              >
+                Unregister
+              </Button>
+            </Button.Group>
           );
         }
         
         // For students, check if already enrolled
         if (isStudent && record.isEnrolled) {
           return (
-            <Button
-              size="small"
-              disabled
-              style={{ color: '#52c41a', borderColor: '#52c41a' }}
-            >
-              Enrolled
-            </Button>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'flex-start',
+              width: '140px'  // Same total width as Button.Group
+            }}>
+              <div style={{ width: '70px' }}></div> {/* Spacer same as "Assigned" button */}
+              <Button
+                size="small"
+                disabled
+                style={{ 
+                  color: '#52c41a', 
+                  borderColor: '#52c41a',
+                  borderRadius: '6px' // Fully rounded
+                }}
+              >
+                Enrolled
+              </Button>
+            </div>
           );
         }
         
         return (
-          <Button
-            type="primary"
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={() => handleCourseAction(record)}
-            disabled={record.status !== 'ACTIVE'}
-          >
-            {actionTextCapitalized}
-          </Button>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'flex-start',
+            width: '140px'  // Same total width as Button.Group
+          }}>
+            <div style={{ width: '70px' }}></div> {/* Spacer same as "Assigned" button */}
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => handleCourseAction(record)}
+              disabled={record.status !== 'ACTIVE'}
+              style={{ 
+                borderRadius: '6px' // Fully rounded
+              }}
+            >
+              {actionTextCapitalized}
+            </Button>
+          </div>
         );
       }
     }
@@ -238,7 +306,7 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
             >
               <Option value="">All Degrees</Option>
               {degrees.map(degree => (
-                <Option key={degree} value={degree}>{degree}</Option>
+                <Option key={degree.id} value={degree.name}>{degree.name}</Option>
               ))}
             </Select>
           </Col>
@@ -259,12 +327,11 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
           loading={loading}
           pagination={{
             pageSize: 10,
-            showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => 
               `${range[0]}-${range[1]} of ${total} courses`
           }}
-          scroll={{ x: 860 }}
+          scroll={{ x: 920 }}
         />
       </Card>
 

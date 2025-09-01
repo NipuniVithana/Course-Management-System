@@ -48,7 +48,22 @@ const lecturerService = {
 
   // Assignment Management
   createAssignment: async (assignmentData) => {
-    const response = await api.post('/lecturer/assignments', assignmentData);
+    const formData = new FormData();
+    formData.append('courseId', assignmentData.courseId);
+    formData.append('title', assignmentData.title);
+    formData.append('description', assignmentData.description);
+    formData.append('maxPoints', assignmentData.maxPoints);
+    formData.append('dueDate', assignmentData.dueDate);
+    
+    if (assignmentData.file) {
+      formData.append('file', assignmentData.file);
+    }
+    
+    const response = await api.post('/lecturer/assignments', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
@@ -58,13 +73,34 @@ const lecturerService = {
   },
 
   updateAssignment: async (assignmentId, assignmentData) => {
-    const response = await api.put(`/lecturer/assignments/${assignmentId}`, assignmentData);
+    const formData = new FormData();
+    formData.append('title', assignmentData.title);
+    formData.append('description', assignmentData.description);
+    formData.append('maxPoints', assignmentData.maxPoints);
+    formData.append('dueDate', assignmentData.dueDate);
+    
+    if (assignmentData.file) {
+      formData.append('file', assignmentData.file);
+    }
+    
+    const response = await api.put(`/lecturer/assignments/${assignmentId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
   deleteAssignment: async (assignmentId) => {
     const response = await api.delete(`/lecturer/assignments/${assignmentId}`);
     return response.data;
+  },
+
+  downloadAssignmentFile: async (assignmentId) => {
+    const response = await api.get(`/lecturer/assignments/${assignmentId}/download`, {
+      responseType: 'blob',
+    });
+    return response;
   },
 
   // Submission Management
@@ -102,8 +138,18 @@ const lecturerService = {
     return response.data;
   },
 
+  getAllDegrees: async () => {
+    const response = await api.get('/degrees');
+    return response.data;
+  },
+
   registerToCourse: async (courseId) => {
     const response = await api.post(`/lecturer/courses/${courseId}/register`);
+    return response.data;
+  },
+
+  unregisterFromCourse: async (courseId) => {
+    const response = await api.delete(`/lecturer/courses/${courseId}/unregister`);
     return response.data;
   },
 
@@ -147,6 +193,13 @@ const lecturerService = {
     return response.data;
   },
 
+  downloadCourseMaterial: async (courseId, materialId) => {
+    const response = await api.get(`/lecturer/courses/${courseId}/materials/${materialId}/download`, {
+      responseType: 'blob',
+    });
+    return response;
+  },
+
   // Student Grading
   updateStudentGrade: async (courseId, studentId, gradeData) => {
     const response = await api.put(`/lecturer/courses/${courseId}/students/${studentId}/grade`, gradeData);
@@ -156,6 +209,22 @@ const lecturerService = {
   // Recent Activities
   getRecentActivities: async () => {
     const response = await api.get('/lecturer/recent-activities');
+    return response.data;
+  },
+
+  // Profile Management
+  getProfile: async () => {
+    const response = await api.get('/lecturer/profile');
+    return response.data;
+  },
+
+  updateProfile: async (profileData) => {
+    const response = await api.put('/lecturer/profile', profileData);
+    return response.data;
+  },
+
+  changePassword: async (passwordData) => {
+    const response = await api.put('/lecturer/change-password', passwordData);
     return response.data;
   },
 };

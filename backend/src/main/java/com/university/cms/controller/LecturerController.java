@@ -1,5 +1,6 @@
 package com.university.cms.controller;
 
+import com.university.cms.entity.Assignment;
 import com.university.cms.entity.Course;
 import com.university.cms.entity.Lecturer;
 import com.university.cms.entity.User;
@@ -15,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map;
 
 @RestController
@@ -107,6 +107,25 @@ public class LecturerController {
         }
     }
 
+    // Unregister from course
+    @DeleteMapping("/courses/{courseId}/unregister")
+    public ResponseEntity<String> unregisterFromCourse(
+            @PathVariable Long courseId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Unregister lecturer from the course
+            courseService.unregisterLecturerFromCourse(courseId, lecturer.getId());
+            
+            return ResponseEntity.ok("Successfully unregistered from course");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to unregister from course: " + e.getMessage());
+        }
+    }
+
     // Get enrolled students for a course
     @GetMapping("/courses/{courseId}/students")
     public ResponseEntity<List<Map<String, Object>>> getEnrolledStudents(
@@ -178,8 +197,7 @@ public class LecturerController {
             }
             
             // Store material using lecturer service
-            lecturerService.uploadCourseMaterial(courseId, title, description, 
-                file.getOriginalFilename(), file.getSize());
+            lecturerService.uploadCourseMaterial(courseId, title, description, file);
             
             System.out.println("Material stored successfully for course: " + courseId);
             
@@ -253,6 +271,159 @@ public class LecturerController {
         }
     }
 
+    // Download course material
+    @GetMapping("/courses/{courseId}/materials/{materialId}/download")
+    public ResponseEntity<byte[]> downloadCourseMaterial(
+            @PathVariable Long courseId,
+            @PathVariable Long materialId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this course
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).build();
+            }
+            
+            return lecturerService.downloadCourseMaterial(courseId, materialId);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // Assignment Management
+    @GetMapping("/courses/{courseId}/assignments")
+    public ResponseEntity<List<Assignment>> getCourseAssignments(
+            @PathVariable Long courseId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this course
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).build();
+            }
+            
+            List<Assignment> assignments = lecturerService.getCourseAssignments(courseId);
+            return ResponseEntity.ok(assignments);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/assignments")
+    public ResponseEntity<String> createAssignment(
+            @RequestParam("courseId") Long courseId,
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("maxPoints") Integer maxPoints,
+            @RequestParam("dueDate") String dueDate,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this course
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).body("Access denied");
+            }
+            
+            Map<String, Object> assignmentData = new HashMap<>();
+            assignmentData.put("courseId", courseId);
+            assignmentData.put("title", title);
+            assignmentData.put("description", description);
+            assignmentData.put("maxPoints", maxPoints);
+            assignmentData.put("dueDate", dueDate);
+            
+            lecturerService.createAssignment(assignmentData, file);
+            return ResponseEntity.ok("Assignment created successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to create assignment: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/assignments/{assignmentId}")
+    public ResponseEntity<String> updateAssignment(
+            @PathVariable Long assignmentId,
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("maxPoints") Integer maxPoints,
+            @RequestParam("dueDate") String dueDate,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this assignment via course
+            Long courseId = lecturerService.getCourseIdByAssignmentId(assignmentId);
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).body("Access denied");
+            }
+            
+            Map<String, Object> assignmentData = new HashMap<>();
+            assignmentData.put("title", title);
+            assignmentData.put("description", description);
+            assignmentData.put("maxPoints", maxPoints);
+            assignmentData.put("dueDate", dueDate);
+            
+            lecturerService.updateAssignment(assignmentId, assignmentData, file);
+            return ResponseEntity.ok("Assignment updated successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to update assignment: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/assignments/{assignmentId}")
+    public ResponseEntity<String> deleteAssignment(
+            @PathVariable Long assignmentId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this assignment via course
+            Long courseId = lecturerService.getCourseIdByAssignmentId(assignmentId);
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).body("Access denied");
+            }
+            
+            lecturerService.deleteAssignment(assignmentId);
+            return ResponseEntity.ok("Assignment deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to delete assignment: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/assignments/{assignmentId}/download")
+    public ResponseEntity<byte[]> downloadAssignmentFile(
+            @PathVariable Long assignmentId,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            // Verify lecturer has access to this assignment via course
+            Long courseId = lecturerService.getCourseIdByAssignmentId(assignmentId);
+            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+                return ResponseEntity.status(403).build();
+            }
+            
+            return lecturerService.downloadAssignmentFile(assignmentId);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     // Grade management placeholder
     @PutMapping("/courses/{courseId}/students/{studentId}/grade")
     public ResponseEntity<String> updateStudentGrade(
@@ -281,6 +452,61 @@ public class LecturerController {
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
             response.put("message", "Failed to load recent activities: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // Profile Management
+    @GetMapping("/profile")
+    @PreAuthorize("hasRole('LECTURER')")
+    public ResponseEntity<?> getProfile(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            Map<String, Object> profile = lecturerService.getProfile(lecturer);
+            return ResponseEntity.ok(profile);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Failed to load profile: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/profile")
+    @PreAuthorize("hasRole('LECTURER')")
+    public ResponseEntity<?> updateProfile(
+            @RequestBody Map<String, Object> profileData,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            lecturerService.updateProfile(lecturer, profileData);
+            return ResponseEntity.ok("Profile updated successfully");
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Failed to update profile: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/change-password")
+    @PreAuthorize("hasRole('LECTURER')")
+    public ResponseEntity<?> changePassword(
+            @RequestBody Map<String, String> passwordData,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            
+            lecturerService.changePassword(user, passwordData);
+            return ResponseEntity.ok("Password changed successfully");
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Failed to change password: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
     }

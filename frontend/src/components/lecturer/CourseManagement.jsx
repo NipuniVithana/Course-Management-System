@@ -17,7 +17,8 @@ import {
   Avatar,
   Breadcrumb,
   Spin,
-  Dropdown
+  Dropdown,
+  DatePicker
 } from 'antd';
 import {
   BookOutlined,
@@ -35,6 +36,7 @@ import {
   DownloadOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 import lecturerService from '../../services/lecturerService';
 import studentService from '../../services/studentService';
 
@@ -49,14 +51,20 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState([]);
   const [materials, setMaterials] = useState([]);
+  const [assignments, setAssignments] = useState([]);
   const [uploadModal, setUploadModal] = useState(false);
+  const [assignmentModal, setAssignmentModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
+  const [editAssignmentModal, setEditAssignmentModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [gradeModal, setGradeModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [activeTab, setActiveTab] = useState('materials');
   const [form] = Form.useForm();
+  const [assignmentForm] = Form.useForm();
   const [editForm] = Form.useForm();
+  const [editAssignmentForm] = Form.useForm();
   const [gradeForm] = Form.useForm();
 
   // Role-based configuration
@@ -80,16 +88,26 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
             setMaterials(materialsData);
             setStudents(studentsData);
             setStudentGrade(gradesData);
+            // Students can view assignments but not edit them
+            try {
+              const assignmentsData = await lecturerService.getAssignments(courseId);
+              setAssignments(assignmentsData);
+            } catch (error) {
+              console.error('Error loading assignments:', error);
+              setAssignments([]);
+            }
           } else {
             // For lecturers, load all data as before
-            const [courseData, studentsData, materialsData] = await Promise.all([
+            const [courseData, studentsData, materialsData, assignmentsData] = await Promise.all([
               lecturerService.getCourseById(courseId),
               lecturerService.getEnrolledStudents(courseId),
-              lecturerService.getCourseMaterials(courseId)
+              lecturerService.getCourseMaterials(courseId),
+              lecturerService.getAssignments(courseId).catch(() => [])
             ]);
             setCourse(courseData);
             setStudents(studentsData);
             setMaterials(materialsData);
+            setAssignments(assignmentsData);
           }
         } catch (error) {
           console.error('Error loading course data:', error);
@@ -115,14 +133,24 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
         setMaterials(materialsData);
         setStudents(studentsData);
         setStudentGrade(gradesData);
+        // Students can view assignments but not edit them
+        try {
+          const assignmentsData = await lecturerService.getAssignments(courseId);
+          setAssignments(assignmentsData);
+        } catch (error) {
+          console.error('Error loading assignments:', error);
+          setAssignments([]);
+        }
       } else {
         // For lecturers, reload all data
-        const [studentsData, materialsData] = await Promise.all([
+        const [studentsData, materialsData, assignmentsData] = await Promise.all([
           lecturerService.getEnrolledStudents(courseId),
-          lecturerService.getCourseMaterials(courseId)
+          lecturerService.getCourseMaterials(courseId),
+          lecturerService.getAssignments(courseId).catch(() => [])
         ]);
         setStudents(studentsData);
         setMaterials(materialsData);
+        setAssignments(assignmentsData);
       }
     } catch (error) {
       console.error('Error loading course data:', error);
@@ -140,6 +168,103 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
     } catch (error) {
       console.error('Error uploading material:', error);
       message.error('Failed to upload material');
+    }
+  };
+
+  const handleCreateAssignment = async (values) => {
+    try {
+      const assignmentData = {
+        ...values,
+        courseId: courseId,
+        dueDate: values.dueDate.format('YYYY-MM-DDTHH:mm:ss')
+      };
+      
+      // Handle file upload
+      if (values.file && values.file.fileList && values.file.fileList.length > 0) {
+        assignmentData.file = values.file.fileList[0].originFileObj;
+      }
+      
+      await lecturerService.createAssignment(assignmentData);
+      message.success('Assignment created successfully');
+      setAssignmentModal(false);
+      assignmentForm.resetFields();
+      await loadCourseData();
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      message.error('Failed to create assignment');
+    }
+  };
+
+  const handleEditAssignment = (assignment) => {
+    setSelectedAssignment(assignment);
+    editAssignmentForm.setFieldsValue({
+      title: assignment.title,
+      description: assignment.description,
+      maxPoints: assignment.maxPoints,
+      dueDate: dayjs(assignment.dueDate)
+    });
+    setEditAssignmentModal(true);
+  };
+
+  const handleUpdateAssignment = async (values) => {
+    try {
+      const assignmentData = {
+        ...values,
+        dueDate: values.dueDate.format('YYYY-MM-DDTHH:mm:ss')
+      };
+      
+      // Handle file upload
+      if (values.file && values.file.fileList && values.file.fileList.length > 0) {
+        assignmentData.file = values.file.fileList[0].originFileObj;
+      }
+      
+      await lecturerService.updateAssignment(selectedAssignment.id, assignmentData);
+      message.success('Assignment updated successfully');
+      setEditAssignmentModal(false);
+      editAssignmentForm.resetFields();
+      setSelectedAssignment(null);
+      await loadCourseData();
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+      message.error('Failed to update assignment');
+    }
+  };
+
+  const handleDeleteAssignment = async (assignment) => {
+    Modal.confirm({
+      title: 'Delete Assignment',
+      content: `Are you sure you want to delete "${assignment.title}"?`,
+      okText: 'Yes, Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await lecturerService.deleteAssignment(assignment.id);
+          message.success('Assignment deleted successfully');
+          await loadCourseData();
+        } catch (error) {
+          console.error('Error deleting assignment:', error);
+          message.error('Failed to delete assignment');
+        }
+      }
+    });
+  };
+
+  const handleDownloadAssignmentFile = async (assignment) => {
+    try {
+      const response = await lecturerService.downloadAssignmentFile(assignment.id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = assignment.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success('File downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      message.error('Failed to download file');
     }
   };
 
@@ -213,16 +338,26 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
     });
   };
 
-  const handleDownloadMaterial = (material) => {
-    // In a real implementation, you would download the actual file
-    message.info(`Downloading ${material.fileName}...`);
-    // Simulate download
-    const link = document.createElement('a');
-    link.href = '#'; // In real implementation, this would be the file URL
-    link.download = material.fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadMaterial = async (material) => {
+    try {
+      message.info(`Downloading ${material.fileName}...`);
+      const response = await lecturerService.downloadCourseMaterial(courseId, material.id);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = material.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      message.success(`${material.fileName} downloaded successfully`);
+    } catch (error) {
+      console.error('Error downloading material:', error);
+      message.error('Failed to download material');
+    }
   };
 
   const showGradeModal = (student) => {
@@ -353,16 +488,8 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
             <List
               dataSource={materials}
               renderItem={(material) => {
-                let menuItems = [
-                  {
-                    key: 'download',
-                    label: 'Download',
-                    icon: <DownloadOutlined />,
-                    onClick: () => handleDownloadMaterial(material)
-                  }
-                ];
-
-                // Only add edit and delete options for lecturers
+                // For lecturers, only edit and delete in dropdown menu
+                let menuItems = [];
                 if (!isStudent) {
                   menuItems = [
                     {
@@ -371,7 +498,6 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
                       icon: <EditOutlined />,
                       onClick: () => handleEditMaterial(material)
                     },
-                    ...menuItems,
                     {
                       key: 'delete',
                       label: 'Delete',
@@ -388,14 +514,21 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
                       isStudent ? [
                         // For students, show only download button directly
                         <Button
-                          type="text"
+                          type="link"
                           icon={<DownloadOutlined />}
                           onClick={() => handleDownloadMaterial(material)}
                         >
                           Download
                         </Button>
                       ] : [
-                        // For lecturers, show dropdown menu
+                        // For lecturers, show download link and dropdown menu
+                        <Button
+                          type="link"
+                          icon={<DownloadOutlined />}
+                          onClick={() => handleDownloadMaterial(material)}
+                        >
+                          Download
+                        </Button>,
                         <Dropdown
                           menu={{ items: menuItems }}
                           trigger={['click']}
@@ -438,6 +571,116 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
                 );
               }}
               locale={{ emptyText: 'No materials uploaded yet' }}
+            />
+          </TabPane>
+
+          <TabPane 
+            tab={
+              <span>
+                <FileTextOutlined />
+                Assignments ({assignments.length})
+              </span>
+            } 
+            key="assignments"
+          >
+            {!isStudent && (
+              <div style={{ marginBottom: 16 }}>
+                <Button
+                  type="primary"
+                  icon={<UploadOutlined />}
+                  onClick={() => setAssignmentModal(true)}
+                >
+                  Create Assignment
+                </Button>
+              </div>
+            )}
+            <List
+              dataSource={assignments}
+              renderItem={(assignment) => {
+                let menuItems = [];
+
+                // Only add edit and delete options for lecturers
+                if (!isStudent) {
+                  menuItems = [
+                    {
+                      key: 'edit',
+                      label: 'Edit',
+                      icon: <EditOutlined />,
+                      onClick: () => handleEditAssignment(assignment)
+                    },
+                    {
+                      key: 'delete',
+                      label: 'Delete',
+                      icon: <DeleteOutlined />,
+                      danger: true,
+                      onClick: () => handleDeleteAssignment(assignment)
+                    }
+                  ];
+                }
+
+                return (
+                  <List.Item
+                    actions={
+                      !isStudent ? [
+                        // For lecturers, show dropdown menu
+                        <Dropdown
+                          menu={{ items: menuItems }}
+                          trigger={['click']}
+                          placement="bottomRight"
+                        >
+                          <Button
+                            type="text"
+                            icon={<MoreOutlined />}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center' 
+                            }}
+                          />
+                        </Dropdown>
+                      ] : []
+                    }
+                  >
+                    <List.Item.Meta
+                      avatar={<Avatar icon={<FileTextOutlined />} style={{ backgroundColor: '#1890ff' }} />}
+                      title={assignment.title}
+                      description={
+                        <Space direction="vertical" size={4}>
+                          <Text type="secondary">{assignment.description}</Text>
+                          <Space>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                              <CalendarOutlined /> Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                            </Text>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                              🏆 Max Points: {assignment.maxPoints}
+                            </Text>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                              📅 Created: {new Date(assignment.createdAt).toLocaleDateString()}
+                            </Text>
+                            {assignment.fileName && (
+                              <Text type="secondary" style={{ fontSize: '12px' }}>
+                                📎 File: {assignment.fileName}
+                              </Text>
+                            )}
+                          </Space>
+                          {assignment.fileName && (
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<DownloadOutlined />}
+                              onClick={() => handleDownloadAssignmentFile(assignment)}
+                              style={{ padding: '2px 8px', fontSize: '12px' }}
+                            >
+                              Download File
+                            </Button>
+                          )}
+                        </Space>
+                      }
+                    />
+                  </List.Item>
+                );
+              }}
+              locale={{ emptyText: 'No assignments created yet' }}
             />
           </TabPane>
 
@@ -670,6 +913,192 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 To replace the file, upload a new material instead.
               </Text>
+            </div>
+          )}
+        </Form>
+      </Modal>
+
+      {/* Create Assignment Modal */}
+      <Modal
+        title="Create Assignment"
+        open={assignmentModal}
+        onOk={assignmentForm.submit}
+        onCancel={() => setAssignmentModal(false)}
+        width={600}
+      >
+        <Form
+          form={assignmentForm}
+          layout="vertical"
+          onFinish={handleCreateAssignment}
+        >
+          <Form.Item
+            name="title"
+            label="Assignment Title"
+            rules={[{ required: true, message: 'Please enter assignment title' }]}
+          >
+            <Input placeholder="Enter assignment title" />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="Description"
+            rules={[{ required: true, message: 'Please enter description' }]}
+          >
+            <TextArea rows={4} placeholder="Enter assignment description" />
+          </Form.Item>
+          <Form.Item
+            name="maxPoints"
+            label="Maximum Points"
+            rules={[
+              { required: true, message: 'Please enter maximum points' },
+              { 
+                validator: (_, value) => {
+                  if (value === null || value === undefined) {
+                    return Promise.reject(new Error('Please enter maximum points'));
+                  }
+                  if (value <= 0) {
+                    return Promise.reject(new Error('Maximum points must be greater than 0'));
+                  }
+                  return Promise.resolve();
+                }
+              }
+            ]}
+          >
+            <InputNumber 
+              min={1} 
+              max={1000} 
+              style={{ width: '100%' }}
+              placeholder="Enter maximum points" 
+            />
+          </Form.Item>
+          <Form.Item
+            name="dueDate"
+            label="Due Date"
+            rules={[{ required: true, message: 'Please select due date' }]}
+          >
+            <DatePicker 
+              showTime
+              style={{ width: '100%' }}
+              placeholder="Select due date and time"
+            />
+          </Form.Item>
+          <Form.Item
+            name="file"
+            label="Assignment File (Optional)"
+          >
+            <Upload.Dragger
+              beforeUpload={() => false}
+              maxCount={1}
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.xls,.xlsx"
+            >
+              <p className="ant-upload-drag-icon">
+                <UploadOutlined />
+              </p>
+              <p className="ant-upload-text">Click or drag file to this area to upload</p>
+              <p className="ant-upload-hint">
+                Support for PDF, DOC, PPT, and other document formats (Max: 50MB)
+              </p>
+            </Upload.Dragger>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Edit Assignment Modal */}
+      <Modal
+        title="Edit Assignment"
+        open={editAssignmentModal}
+        onOk={editAssignmentForm.submit}
+        onCancel={() => {
+          setEditAssignmentModal(false);
+          setSelectedAssignment(null);
+          editAssignmentForm.resetFields();
+        }}
+        width={600}
+      >
+        <Form
+          form={editAssignmentForm}
+          layout="vertical"
+          onFinish={handleUpdateAssignment}
+        >
+          <Form.Item
+            name="title"
+            label="Assignment Title"
+            rules={[{ required: true, message: 'Please enter assignment title' }]}
+          >
+            <Input placeholder="Enter assignment title" />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="Description"
+            rules={[{ required: true, message: 'Please enter description' }]}
+          >
+            <TextArea rows={4} placeholder="Enter assignment description" />
+          </Form.Item>
+          <Form.Item
+            name="maxPoints"
+            label="Maximum Points"
+            rules={[
+              { required: true, message: 'Please enter maximum points' },
+              { 
+                validator: (_, value) => {
+                  if (value === null || value === undefined) {
+                    return Promise.reject(new Error('Please enter maximum points'));
+                  }
+                  if (value <= 0) {
+                    return Promise.reject(new Error('Maximum points must be greater than 0'));
+                  }
+                  return Promise.resolve();
+                }
+              }
+            ]}
+          >
+            <InputNumber 
+              min={1} 
+              max={1000} 
+              style={{ width: '100%' }}
+              placeholder="Enter maximum points" 
+            />
+          </Form.Item>
+          <Form.Item
+            name="dueDate"
+            label="Due Date"
+            rules={[{ required: true, message: 'Please select due date' }]}
+          >
+            <DatePicker 
+              showTime
+              style={{ width: '100%' }}
+              placeholder="Select due date and time"
+            />
+          </Form.Item>
+          <Form.Item
+            name="file"
+            label="Assignment File (Optional)"
+          >
+            <Upload.Dragger
+              beforeUpload={() => false}
+              maxCount={1}
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.xls,.xlsx"
+            >
+              <p className="ant-upload-drag-icon">
+                <UploadOutlined />
+              </p>
+              <p className="ant-upload-text">Click or drag file to this area to upload</p>
+              <p className="ant-upload-hint">
+                Replace existing file or upload new file (PDF, DOC, PPT, etc.)
+              </p>
+            </Upload.Dragger>
+          </Form.Item>
+          {selectedAssignment && selectedAssignment.fileName && (
+            <div style={{ padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '8px', marginBottom: '16px' }}>
+              <Text strong>Current File: </Text>
+              <Text>{selectedAssignment.fileName}</Text>
+              <Button
+                type="link"
+                icon={<DownloadOutlined />}
+                onClick={() => handleDownloadAssignmentFile(selectedAssignment)}
+                style={{ marginLeft: '8px' }}
+              >
+                Download
+              </Button>
             </div>
           )}
         </Form>

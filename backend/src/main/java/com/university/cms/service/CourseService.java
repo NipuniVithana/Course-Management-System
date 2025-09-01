@@ -374,6 +374,20 @@ public class CourseService {
         return courseRepository.save(course);
     }
 
+    public Course unregisterLecturerFromCourse(Long courseId, Long lecturerId) {
+        Course course = getCourseById(courseId);
+        
+        // Verify that the lecturer is currently assigned to this course
+        if (course.getLecturer() == null || !course.getLecturer().getId().equals(lecturerId)) {
+            throw new RuntimeException("Lecturer is not assigned to this course");
+        }
+        
+        // Remove lecturer assignment
+        course.setLecturer(null);
+        course.setUpdatedAt(LocalDateTime.now());
+        return courseRepository.save(course);
+    }
+
     // Lecturer-specific methods
     public List<Map<String, Object>> getAvailableCoursesForLecturer(Lecturer lecturer) {
         List<Course> allCourses = courseRepository.findAll();

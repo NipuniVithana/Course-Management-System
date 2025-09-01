@@ -30,6 +30,11 @@ const studentService = {
     return response.data;
   },
 
+  getAllDegrees: async () => {
+    const response = await api.get('/degrees');
+    return response.data;
+  },
+
   getAvailableCourses: async () => {
     const response = await api.get('/student/courses');
     return response.data;

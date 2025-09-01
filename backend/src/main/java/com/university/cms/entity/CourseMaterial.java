@@ -6,8 +6,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "assignments")
-public class Assignment {
+@Table(name = "course_materials")
+public class CourseMaterial {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,33 +22,29 @@ public class Assignment {
     @Column(columnDefinition = "TEXT")
     private String description;
     
-    @Column(name = "due_date", nullable = false)
-    private LocalDateTime dueDate;
-    
-    @Column(name = "max_points", nullable = false)
-    private Integer maxPoints = 100;
-    
-    @Column(name = "file_name")
+    @Column(name = "file_name", nullable = false)
     private String fileName;
     
-    @Column(name = "file_path")
+    @Column(name = "file_path", nullable = false)
     private String filePath;
     
     @Column(name = "file_size")
     private Long fileSize;
     
     @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Column(name = "upload_date")
+    private LocalDateTime uploadDate;
     
     // Constructors
-    public Assignment() {}
+    public CourseMaterial() {}
     
-    public Assignment(Course course, String title, LocalDateTime dueDate, Integer maxPoints) {
+    public CourseMaterial(Course course, String title, String description, String fileName, String filePath, Long fileSize) {
         this.course = course;
         this.title = title;
-        this.dueDate = dueDate;
-        this.maxPoints = maxPoints;
+        this.description = description;
+        this.fileName = fileName;
+        this.filePath = filePath;
+        this.fileSize = fileSize;
     }
     
     // Getters and Setters
@@ -84,30 +80,6 @@ public class Assignment {
         this.description = description;
     }
     
-    public LocalDateTime getDueDate() {
-        return dueDate;
-    }
-    
-    public void setDueDate(LocalDateTime dueDate) {
-        this.dueDate = dueDate;
-    }
-    
-    public Integer getMaxPoints() {
-        return maxPoints;
-    }
-    
-    public void setMaxPoints(Integer maxPoints) {
-        this.maxPoints = maxPoints;
-    }
-    
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-    
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-    
     public String getFileName() {
         return fileName;
     }
@@ -130,5 +102,13 @@ public class Assignment {
     
     public void setFileSize(Long fileSize) {
         this.fileSize = fileSize;
+    }
+    
+    public LocalDateTime getUploadDate() {
+        return uploadDate;
+    }
+    
+    public void setUploadDate(LocalDateTime uploadDate) {
+        this.uploadDate = uploadDate;
     }
 }
