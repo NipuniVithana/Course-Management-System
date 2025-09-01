@@ -18,16 +18,11 @@ public class CourseDto {
     @Positive(message = "Credits must be positive")
     private Integer credits;
     
-    // Make lecturerId optional
-    private Long lecturerId;
-    
     @NotNull(message = "Degree ID is required")
     private Long degreeId;
     
     @NotBlank(message = "Department is required")  
     private String department;
-    
-    private Integer capacity;
     
     public CourseDto() {}
     
@@ -63,14 +58,6 @@ public class CourseDto {
         this.credits = credits;
     }
     
-    public Long getLecturerId() {
-        return lecturerId;
-    }
-    
-    public void setLecturerId(Long lecturerId) {
-        this.lecturerId = lecturerId;
-    }
-    
     public Long getDegreeId() {
         return degreeId;
     }
@@ -85,13 +72,5 @@ public class CourseDto {
     
     public void setDepartment(String department) {
         this.department = department;
-    }
-    
-    public Integer getCapacity() {
-        return capacity;
-    }
-    
-    public void setCapacity(Integer capacity) {
-        this.capacity = capacity;
     }
 }

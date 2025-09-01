@@ -138,7 +138,6 @@ public class LecturerService {
             courseData.put("courseCode", course.getCourseCode());
             courseData.put("description", course.getDescription());
             courseData.put("credits", course.getCredits());
-            courseData.put("capacity", course.getCapacity());
             courseData.put("department", course.getDepartment());
             courseData.put("status", course.getStatus());
             

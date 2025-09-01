@@ -19,7 +19,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,9 +50,61 @@ public class CourseService {
             System.out.println("DEBUG: Course - ID: " + course.getId() + 
                 ", Title: " + course.getTitle() + 
                 ", Code: " + course.getCourseCode() + 
-                ", Credits: " + course.getCredits());
+                ", Credits: " + course.getCredits() +
+                ", Lecturer: " + (course.getLecturer() != null ? 
+                    course.getLecturer().getFirstName() + " " + course.getLecturer().getLastName() : "None"));
         }
         return courses;
+    }
+
+    // Admin-specific method to get courses with all related data
+    public List<Map<String, Object>> getAllCoursesForAdmin() {
+        List<Course> courses = courseRepository.findAll();
+        return courses.stream()
+                .map(course -> {
+                    Map<String, Object> courseData = new HashMap<>();
+                    courseData.put("id", course.getId());
+                    courseData.put("courseCode", course.getCourseCode());
+                    courseData.put("title", course.getTitle());
+                    courseData.put("description", course.getDescription());
+                    courseData.put("credits", course.getCredits());
+                    courseData.put("department", course.getDepartment());
+                    courseData.put("status", course.getStatus());
+                    courseData.put("createdAt", course.getCreatedAt());
+                    courseData.put("updatedAt", course.getUpdatedAt());
+                    
+                    // Add degree information
+                    if (course.getDegree() != null) {
+                        Map<String, Object> degreeData = new HashMap<>();
+                        degreeData.put("id", course.getDegree().getId());
+                        degreeData.put("name", course.getDegree().getName());
+                        degreeData.put("department", course.getDegree().getDepartment());
+                        courseData.put("degree", degreeData);
+                    } else {
+                        courseData.put("degree", null);
+                    }
+                    
+                    // Add lecturer information
+                    if (course.getLecturer() != null) {
+                        courseData.put("lecturerId", course.getLecturer().getId());
+                        courseData.put("lecturerName", 
+                            course.getLecturer().getFirstName() + " " + course.getLecturer().getLastName());
+                        courseData.put("lecturerFirstName", course.getLecturer().getFirstName());
+                        courseData.put("lecturerLastName", course.getLecturer().getLastName());
+                    } else {
+                        courseData.put("lecturerId", null);
+                        courseData.put("lecturerName", null);
+                        courseData.put("lecturerFirstName", null);
+                        courseData.put("lecturerLastName", null);
+                    }
+                    
+                    // Add enrollment count
+                    long enrollmentCount = enrollmentRepository.countEnrolledByCourseId(course.getId());
+                    courseData.put("enrollmentCount", enrollmentCount);
+                    
+                    return courseData;
+                })
+                .collect(Collectors.toList());
     }
 
     public Course getCourseById(Long id) {
@@ -82,41 +133,12 @@ public class CourseService {
         
         course.setDepartment(courseRequest.getDepartment());
         
-        // Set capacity if provided, otherwise use default
-        if (courseRequest.getCapacity() != null) {
-            course.setCapacity(courseRequest.getCapacity());
-        }
-        
-        // Set lecturer if provided (optional)
-        if (courseRequest.getLecturerId() != null) {
-            Lecturer lecturer = lecturerRepository.findById(courseRequest.getLecturerId())
-                    .orElseThrow(() -> new RuntimeException("Lecturer not found with id: " + courseRequest.getLecturerId()));
-            course.setLecturer(lecturer);
-        }
-        
         course.setUpdatedAt(LocalDateTime.now());
         return courseRepository.save(course);
     }
 
     public Course updateCourse(Long id, CourseDto courseRequest) {
         Course course = getCourseById(id);
-
-        // Handle lecturer assignment/update with null checks
-        Long currentLecturerId = course.getLecturer() != null ? course.getLecturer().getId() : null;
-        Long newLecturerId = courseRequest.getLecturerId();
-        
-        // Check if lecturer needs to be updated
-        if (!Objects.equals(currentLecturerId, newLecturerId)) {
-            if (newLecturerId != null) {
-                // Assign new lecturer
-                Lecturer lecturer = lecturerRepository.findById(newLecturerId)
-                        .orElseThrow(() -> new RuntimeException("Lecturer not found with id: " + newLecturerId));
-                course.setLecturer(lecturer);
-            } else {
-                // Remove lecturer assignment
-                course.setLecturer(null);
-            }
-        }
 
         course.setCourseCode(courseRequest.getCourseCode());
         course.setTitle(courseRequest.getCourseName());
@@ -336,7 +358,7 @@ public class CourseService {
         return stats;
     }
 
-    public Course assignLecturerToCourse(Long courseId, Long lecturerId) {
+    public Course registerLecturerToCourse(Long courseId, Long lecturerId) {
         Course course = getCourseById(courseId);
         
         if (lecturerId != null) {
@@ -363,7 +385,6 @@ public class CourseService {
                     courseData.put("title", course.getTitle());
                     courseData.put("department", course.getDepartment());
                     courseData.put("credits", course.getCredits());
-                    courseData.put("capacity", course.getCapacity());
                     courseData.put("status", course.getStatus());
                     courseData.put("description", course.getDescription());
                     
@@ -403,7 +424,6 @@ public class CourseService {
                     courseData.put("title", course.getTitle());
                     courseData.put("department", course.getDepartment());
                     courseData.put("credits", course.getCredits());
-                    courseData.put("capacity", course.getCapacity());
                     courseData.put("status", course.getStatus());
                     courseData.put("description", course.getDescription());
                     

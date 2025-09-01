@@ -180,13 +180,6 @@ const Degrees = () => {
       ellipsis: true,
     },
     {
-      title: 'Total Courses',
-      dataIndex: 'courseCount',
-      key: 'courseCount',
-      render: (count) => count || 0,
-      sorter: (a, b) => (a.courseCount || 0) - (b.courseCount || 0),
-    },
-    {
       title: 'Actions',
       key: 'actions',
       render: (_, record) => (
@@ -264,7 +257,7 @@ const Degrees = () => {
             showTotal: (total, range) => 
               `${range[0]}-${range[1]} of ${total} degrees`,
           }}
-          scroll={{ x: 800 }}
+          scroll={{ x: 700 }}
         />
       </Card>
 

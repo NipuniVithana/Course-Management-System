@@ -24,9 +24,6 @@ public class Course {
     @Column(nullable = false)
     private Integer credits;
     
-    @Column(nullable = false)
-    private Integer capacity = 30;
-    
     @ManyToOne
     @JoinColumn(name = "degree_id")
     private Degree degree;
@@ -97,14 +94,6 @@ public class Course {
     
     public void setCredits(Integer credits) {
         this.credits = credits;
-    }
-    
-    public Integer getCapacity() {
-        return capacity;
-    }
-    
-    public void setCapacity(Integer capacity) {
-        this.capacity = capacity;
     }
     
     public Degree getDegree() {

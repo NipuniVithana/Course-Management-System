@@ -115,11 +115,6 @@ const adminService = {
     return response.data;
   },
 
-  assignCourseToLecturer: async (courseId, lecturerId) => {
-    const response = await api.put(`/admin/courses/${courseId}/assign`, { lecturerId });
-    return response.data;
-  },
-
   // Degree Management
   getAllDegrees: async () => {
     const response = await api.get('/degrees');

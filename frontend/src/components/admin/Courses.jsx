@@ -33,17 +33,13 @@ const { TextArea } = Input;
 
 const Courses = () => {
   const [courses, setCourses] = useState([]);
-  const [lecturers, setLecturers] = useState([]);
   const [degrees, setDegrees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [selectedDegree, setSelectedDegree] = useState('all');
-  const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [addCourseModalVisible, setAddCourseModalVisible] = useState(false);
   const [editCourseModalVisible, setEditCourseModalVisible] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState(null);
   const [editingCourse, setEditingCourse] = useState(null);
-  const [assignForm] = Form.useForm();
   const [addCourseForm] = Form.useForm();
   const [editCourseForm] = Form.useForm();
 
@@ -54,14 +50,12 @@ const Courses = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [coursesData, lecturersData, degreesData] = await Promise.all([
+      const [coursesData, degreesData] = await Promise.all([
         adminService.getAllCourses(),
-        adminService.getAllLecturers(),
         adminService.getAllDegrees()
       ]);
       console.log('Courses data:', coursesData); // Debug log
       setCourses(coursesData);
-      setLecturers(lecturersData);
       setDegrees(degreesData);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -95,28 +89,6 @@ const Courses = () => {
     }
   };
 
-  const handleAssignLecturer = (course) => {
-    setSelectedCourse(course);
-    assignForm.setFieldsValue({
-      lecturerId: course.lecturerId
-    });
-    setAssignModalVisible(true);
-  };
-
-  const handleAssignSubmit = async (values) => {
-    try {
-      await adminService.assignCourseToLecturer(selectedCourse.id, values.lecturerId);
-      message.success('Lecturer assigned successfully');
-      setAssignModalVisible(false);
-      assignForm.resetFields();
-      setSelectedCourse(null);
-      loadData();
-    } catch (error) {
-      console.error('Error assigning lecturer:', error);
-      message.error('Failed to assign lecturer');
-    }
-  };
-
   const handleAddCourse = () => {
     addCourseForm.resetFields();
     setAddCourseModalVisible(true);
@@ -133,9 +105,7 @@ const Courses = () => {
         description: values.description,
         credits: parseInt(values.credits),
         degreeId: parseInt(values.degreeId),
-        department: values.department,
-        capacity: values.capacity ? parseInt(values.capacity) : null,
-        lecturerId: values.lecturerId || null
+        department: values.department
       };
       
       await adminService.createCourse(courseData);
@@ -169,9 +139,7 @@ const Courses = () => {
       description: course.description,
       credits: course.credits,
       degreeId: course.degree?.id,
-      department: course.department,
-      capacity: course.capacity,
-      lecturerId: course.lecturerId
+      department: course.department
     });
     setEditCourseModalVisible(true);
   };
@@ -187,9 +155,7 @@ const Courses = () => {
         description: values.description,
         credits: parseInt(values.credits),
         degreeId: parseInt(values.degreeId),
-        department: values.department,
-        capacity: values.capacity ? parseInt(values.capacity) : null,
-        lecturerId: values.lecturerId || null
+        department: values.department
       };
       
       await adminService.updateCourse(editingCourse.id, courseData);
@@ -237,7 +203,7 @@ const Courses = () => {
       title: 'Course Code',
       dataIndex: 'courseCode',
       key: 'courseCode',
-      width: 120,
+      width: 110,
       sorter: (a, b) => (a.courseCode || '').localeCompare(b.courseCode || ''),
       fixed: 'left',
     },
@@ -245,14 +211,14 @@ const Courses = () => {
       title: 'Course Name',
       dataIndex: 'title',
       key: 'title',
-      width: 200,
+      width: 220,
       sorter: (a, b) => (a.title || '').localeCompare(b.title || ''),
     },
     {
       title: 'Credits',
       dataIndex: 'credits',
       key: 'credits',
-      width: 80,
+      width: 70,
       align: 'center',
       sorter: (a, b) => (a.credits || 0) - (b.credits || 0),
     },
@@ -260,22 +226,21 @@ const Courses = () => {
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
-      width: 250,
+      width: 300,
       ellipsis: true,
       render: (text) => text || 'N/A',
     },
     {
       title: 'Assigned Lecturer',
       key: 'lecturer',
-      width: 180,
+      width: 140,
       render: (_, record) => {
-        if (record.lecturerId) {
-          const lecturer = lecturers.find(l => l.id === record.lecturerId);
-          return lecturer ? 
+        if (record.lecturerId && record.lecturerFirstName && record.lecturerLastName) {
+          return (
             <Tag color="blue" icon={<UserOutlined />}>
-              {`${lecturer.firstName} ${lecturer.lastName}`}
-            </Tag> : 
-            <Tag color="orange">Unknown Lecturer</Tag>;
+              {`${record.lecturerFirstName} ${record.lecturerLastName}`}
+            </Tag>
+          );
         }
         return <Tag color="red">Not Assigned</Tag>;
       },
@@ -284,7 +249,7 @@ const Courses = () => {
       title: 'Enrollments',
       dataIndex: 'enrollmentCount',
       key: 'enrollmentCount',
-      width: 120,
+      width: 110,
       align: 'center',
       render: (count) => (
         <Tag color="green" icon={<TeamOutlined />}>
@@ -295,18 +260,10 @@ const Courses = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 300,
+      width: 160,
       fixed: 'right',
       render: (_, record) => (
         <Space size="middle">
-          <Button
-            size="small"
-            type="primary"
-            icon={<UserOutlined />}
-            onClick={() => handleAssignLecturer(record)}
-          >
-            Assign Lecturer
-          </Button>
           <Button
             size="small"
             icon={<EditOutlined />}
@@ -395,60 +352,10 @@ const Courses = () => {
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} of ${total} courses`,
           }}
-          scroll={{ x: 1200, y: 600 }}
+          scroll={{ x: 1110, y: 600 }}
           size="middle"
         />
       </Card>
-
-      <Modal
-        title="Assign Lecturer to Course"
-        open={assignModalVisible}
-        onCancel={() => {
-          setAssignModalVisible(false);
-          assignForm.resetFields();
-          setSelectedCourse(null);
-        }}
-        footer={null}
-      >
-        <Form
-          form={assignForm}
-          onFinish={handleAssignSubmit}
-          layout="vertical"
-        >
-          <Form.Item
-            name="lecturerId"
-            label="Select Lecturer"
-            rules={[{ required: true, message: 'Please select a lecturer!' }]}
-          >
-            <Select
-              placeholder="Choose a lecturer"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {lecturers.filter(l => l.active).map(lecturer => (
-                <Option key={lecturer.id} value={lecturer.id}>
-                  {`${lecturer.firstName} ${lecturer.lastName}`}
-                  {lecturer.department && ` - ${lecturer.department}`}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Space>
-              <Button onClick={() => setAssignModalVisible(false)}>
-                Cancel
-              </Button>
-              <Button type="primary" htmlType="submit">
-                Assign Lecturer
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
 
       <Modal
         title="Add New Course"
@@ -526,29 +433,6 @@ const Courses = () => {
             />
           </Form.Item>
 
-          <Form.Item
-            name="lecturerId"
-            label="Assign Lecturer (Optional)"
-            help="You can assign a lecturer now or later from the course management page"
-          >
-            <Select
-              placeholder="Select a lecturer (optional)"
-              allowClear
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {lecturers.filter(l => l.active).map(lecturer => (
-                <Option key={lecturer.id} value={lecturer.id}>
-                  {`${lecturer.firstName} ${lecturer.lastName}`}
-                  {lecturer.department && ` - ${lecturer.department}`}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
@@ -587,21 +471,6 @@ const Courses = () => {
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item
-            name="capacity"
-            label="Maximum Enrollment"
-            rules={[
-              { type: 'number', min: 1, message: 'Maximum enrollment must be at least 1!' }
-            ]}
-          >
-            <InputNumber
-              placeholder="Enter max students (default: 30)"
-              style={{ width: '100%' }}
-              min={1}
-              max={1000}
-            />
-          </Form.Item>
 
           <Form.Item>
             <Space>
@@ -695,29 +564,6 @@ const Courses = () => {
             />
           </Form.Item>
 
-          <Form.Item
-            name="lecturerId"
-            label="Assign Lecturer (Optional)"
-            help="You can assign a lecturer now or later from the course management page"
-          >
-            <Select
-              placeholder="Select a lecturer (optional)"
-              allowClear
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {lecturers.filter(l => l.active).map(lecturer => (
-                <Option key={lecturer.id} value={lecturer.id}>
-                  {`${lecturer.firstName} ${lecturer.lastName}`}
-                  {lecturer.department && ` - ${lecturer.department}`}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
@@ -756,21 +602,6 @@ const Courses = () => {
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item
-            name="capacity"
-            label="Maximum Enrollment"
-            rules={[
-              { type: 'number', min: 1, message: 'Maximum enrollment must be at least 1!' }
-            ]}
-          >
-            <InputNumber
-              placeholder="Enter max students (default: 30)"
-              style={{ width: '100%' }}
-              min={1}
-              max={1000}
-            />
-          </Form.Item>
 
           <Form.Item>
             <Space>

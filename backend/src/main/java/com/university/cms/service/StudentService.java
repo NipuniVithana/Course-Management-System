@@ -53,12 +53,6 @@ public class StudentService {
             throw new RuntimeException("Already enrolled in this course");
         }
 
-        // Check course capacity
-        long enrolledCount = enrollmentRepository.countEnrolledByCourseId(courseId);
-        if (enrolledCount >= course.getCapacity()) {
-            throw new RuntimeException("Course is full");
-        }
-
         // Create enrollment
         Enrollment enrollment = new Enrollment(student, course);
         enrollment.setEnrollmentDate(LocalDateTime.now());
@@ -131,7 +125,6 @@ public class StudentService {
         courseData.put("description", course.getDescription());
         courseData.put("credits", course.getCredits());
         courseData.put("department", course.getDepartment());
-        courseData.put("capacity", course.getCapacity());
         courseData.put("status", course.getStatus());
         
         if (course.getLecturer() != null) {

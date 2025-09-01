@@ -148,7 +148,6 @@ public class DataInitializer implements CommandLineRunner {
         javaCourse.setTitle("Introduction to Java Programming");
         javaCourse.setDescription("Fundamentals of Java programming including object-oriented concepts, data structures, and basic algorithms.");
         javaCourse.setCredits(3);
-        javaCourse.setCapacity(30);
         javaCourse.setDepartment("Computer Science");
         javaCourse.setLecturer(lecturer);
         javaCourse.setDegree(computerScienceDegree);
@@ -162,7 +161,6 @@ public class DataInitializer implements CommandLineRunner {
         webDevCourse.setTitle("Web Development");
         webDevCourse.setDescription("Modern web development using HTML, CSS, JavaScript, and popular frameworks like React.");
         webDevCourse.setCredits(3);
-        webDevCourse.setCapacity(25);
         webDevCourse.setDepartment("Computer Science");
         webDevCourse.setLecturer(lecturer);
         webDevCourse.setDegree(computerScienceDegree);
@@ -176,7 +174,6 @@ public class DataInitializer implements CommandLineRunner {
         databaseCourse.setTitle("Database Management Systems");
         databaseCourse.setDescription("Design and implementation of database systems, SQL, normalization, and database administration.");
         databaseCourse.setCredits(4);
-        databaseCourse.setCapacity(20);
         databaseCourse.setDepartment("Computer Science");
         databaseCourse.setLecturer(lecturer);
         databaseCourse.setDegree(computerScienceDegree);

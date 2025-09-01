@@ -220,29 +220,6 @@ const AddCourse = () => {
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="capacity"
-                label="Maximum Enrollment"
-                rules={[
-                  { type: 'number', min: 1, message: 'Maximum enrollment must be at least 1!' }
-                ]}
-              >
-                <InputNumber
-                  placeholder="Enter max students (default: 30)"
-                  size="large"
-                  style={{ width: '100%' }}
-                  min={1}
-                  max={1000}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              {/* Empty column for spacing or future use */}
-            </Col>
-          </Row>
-
           <Form.Item style={{ marginTop: 32 }}>
             <Space size="middle">
               <Button

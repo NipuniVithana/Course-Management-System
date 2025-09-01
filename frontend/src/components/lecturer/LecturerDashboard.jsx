@@ -207,7 +207,7 @@ const LecturerDashboard = () => {
                             {course.title}
                           </div>
                           <div style={{ color: '#666', fontSize: '12px' }}>
-                            <TeamOutlined /> {course.enrolledCount || 0}/{course.capacity} students
+                            <TeamOutlined /> {course.enrolledCount || 0} students
                           </div>
                         </div>
                       </Col>

@@ -157,23 +157,11 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
       render: (credits) => <Tag color="green">{credits}</Tag>
     },
     {
-      title: 'Capacity',
-      key: 'capacity',
-      width: 100,
-      align: 'center',
-      render: (_, record) => (
-        <span>
-          {record.enrolledCount || 0}/{record.capacity}
-        </span>
-      )
-    },
-    {
       title: 'Action',
       key: 'action',
       width: 100,
       align: 'center',
       render: (_, record) => {
-        const available = (record.enrolledCount || 0) < record.capacity;
         
         // For lecturers, check if already registered
         if (!isStudent && record.isRegistered) {
@@ -207,7 +195,7 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
             size="small"
             icon={<PlusOutlined />}
             onClick={() => handleCourseAction(record)}
-            disabled={isStudent ? !available : record.status !== 'ACTIVE'}
+            disabled={record.status !== 'ACTIVE'}
           >
             {actionTextCapitalized}
           </Button>

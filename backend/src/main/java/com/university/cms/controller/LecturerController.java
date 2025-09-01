@@ -99,7 +99,7 @@ public class LecturerController {
             Lecturer lecturer = lecturerService.getLecturerByUser(user);
             
             // Register lecturer to the course
-            courseService.assignLecturerToCourse(courseId, lecturer.getId());
+            courseService.registerLecturerToCourse(courseId, lecturer.getId());
             
             return ResponseEntity.ok("Successfully registered to course");
         } catch (Exception e) {

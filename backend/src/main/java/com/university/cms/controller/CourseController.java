@@ -36,8 +36,8 @@ public class CourseController {
     // Admin endpoints
     @GetMapping("/admin/courses")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Course>> getAllCourses() {
-        List<Course> courses = courseService.getAllCourses();
+    public ResponseEntity<List<Map<String, Object>>> getAllCourses() {
+        List<Map<String, Object>> courses = courseService.getAllCoursesForAdmin();
         return ResponseEntity.ok(courses);
     }
 
@@ -172,20 +172,6 @@ public class CourseController {
             Boolean active = (Boolean) statusData.get("active");
             Map<String, Object> updatedLecturer = courseService.updateLecturerStatus(id, active);
             return ResponseEntity.ok(updatedLecturer);
-        } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
-    @PutMapping("/admin/courses/{id}/assign")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> assignLecturerToCourse(@PathVariable Long id, @RequestBody Map<String, Long> request) {
-        try {
-            Long lecturerId = request.get("lecturerId");
-            Course course = courseService.assignLecturerToCourse(id, lecturerId);
-            return ResponseEntity.ok(course);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
             response.put("message", e.getMessage());
