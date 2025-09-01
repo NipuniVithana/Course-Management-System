@@ -19,11 +19,12 @@ import {
   ClockCircleOutlined,
   CheckCircleOutlined,
   FilePdfOutlined,
-  TrophyOutlined
+  TrophyOutlined,
+  DashboardOutlined
 } from '@ant-design/icons';
 import lecturerService from '../../services/lecturerService';
 
-const { Title } = Typography;
+const { Title, Paragraph } = Typography;
 
 const LecturerDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -91,74 +92,69 @@ const LecturerDashboard = () => {
 
   return (
     <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-      <Title level={2} style={{ marginBottom: 24, color: '#1890ff' }}>
-        Welcome to Your Dashboard
-      </Title>
+      {/* Header */}
+      <div style={{ marginBottom: '24px' }}>
+        <Title level={2} style={{ margin: 0, color: '#1890ff', display: 'flex', alignItems: 'center' }}>
+          <DashboardOutlined style={{ marginRight: '8px' }} />
+          Lecturer Dashboard
+        </Title>
+        <Paragraph type="secondary" style={{ marginBottom: 0, fontSize: '16px' }}>
+          Welcome back! Manage your courses, assignments, and student progress.
+        </Paragraph>
+      </div>
       
       {/* Statistics Cards */}
       <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
         <Col xs={24} sm={12} lg={6}>
           <Card 
-            style={{ 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              border: 'none',
-              borderRadius: '12px'
-            }}
+            style={{ borderRadius: '8px' }}
+            bodyStyle={{ padding: '20px' }}
           >
             <Statistic
-              title={<span style={{ color: 'white', fontSize: '14px' }}>My Courses</span>}
+              title="My Courses"
               value={dashboardData.totalCourses}
-              prefix={<BookOutlined style={{ color: 'white' }} />}
-              valueStyle={{ color: 'white', fontSize: '32px', fontWeight: 'bold' }}
+              prefix={<BookOutlined style={{ color: '#1890ff' }} />}
+              valueStyle={{ color: '#1890ff', fontSize: '24px' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card 
-            style={{ 
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-              border: 'none',
-              borderRadius: '12px'
-            }}
+            style={{ borderRadius: '8px' }}
+            bodyStyle={{ padding: '20px' }}
           >
             <Statistic
-              title={<span style={{ color: 'white', fontSize: '14px' }}>Total Students</span>}
+              title="Total Students"
               value={dashboardData.totalStudents}
-              prefix={<UserOutlined style={{ color: 'white' }} />}
-              valueStyle={{ color: 'white', fontSize: '32px', fontWeight: 'bold' }}
+              prefix={<UserOutlined style={{ color: '#52c41a' }} />}
+              valueStyle={{ color: '#52c41a', fontSize: '24px' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card 
-            style={{ 
-              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-              border: 'none',
-              borderRadius: '12px'
-            }}
+            style={{ borderRadius: '8px' }}
+            bodyStyle={{ padding: '20px' }}
           >
             <Statistic
-              title={<span style={{ color: 'white', fontSize: '14px' }}>Course Materials</span>}
+              title="Course Materials"
               value={dashboardData.totalMaterials}
-              prefix={<FilePdfOutlined style={{ color: 'white' }} />}
-              valueStyle={{ color: 'white', fontSize: '32px', fontWeight: 'bold' }}
+              prefix={<FilePdfOutlined style={{ color: '#faad14' }} />}
+              valueStyle={{ color: '#faad14', fontSize: '24px' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card 
-            style={{ 
-              background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-              border: 'none',
-              borderRadius: '12px'
-            }}
+            style={{ borderRadius: '8px' }}
+            bodyStyle={{ padding: '20px' }}
           >
             <Statistic
-              title={<span style={{ color: 'white', fontSize: '14px' }}>Average Results</span>}
+              title="Average Results"
               value={dashboardData.averageResults}
-              suffix={<span style={{ color: 'white', fontSize: '16px' }}>%</span>}
-              prefix={<TrophyOutlined style={{ color: 'white' }} />}
-              valueStyle={{ color: 'white', fontSize: '32px', fontWeight: 'bold' }}
+              suffix="%"
+              prefix={<TrophyOutlined style={{ color: '#722ed1' }} />}
+              valueStyle={{ color: '#722ed1', fontSize: '24px' }}
             />
           </Card>
         </Col>
@@ -176,7 +172,7 @@ const LecturerDashboard = () => {
                 <Badge count={courses.length} style={{ backgroundColor: '#52c41a' }} />
               </Space>
             }
-            style={{ borderRadius: '12px', height: '500px' }}
+            style={{ borderRadius: '8px', height: '500px' }}
             bodyStyle={{ height: '420px', overflowY: 'auto' }}
           >
             {courses.length === 0 ? (
@@ -231,7 +227,7 @@ const LecturerDashboard = () => {
                 <span>Recent Activity</span>
               </Space>
             }
-            style={{ borderRadius: '12px', height: '500px' }}
+            style={{ borderRadius: '8px', height: '500px' }}
             bodyStyle={{ height: '420px', overflowY: 'auto' }}
           >
             {recentActivities.length === 0 ? (

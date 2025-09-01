@@ -15,12 +15,13 @@ import {
   BookOutlined,
   TeamOutlined,
   ArrowUpOutlined,
-  BankOutlined
+  BankOutlined,
+  DashboardOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import adminService from '../../services/adminService';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -139,14 +140,16 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>
-          Home
+    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '24px' }}>
+        <Title level={2} style={{ margin: 0, color: '#1890ff', display: 'flex', alignItems: 'center' }}>
+          <DashboardOutlined style={{ marginRight: '8px' }} />
+          Admin Dashboard
         </Title>
-        <Text type="secondary">
-          Welcome to the University of Kelaniya Course Management System
-        </Text>
+        <Paragraph type="secondary" style={{ marginBottom: 0, fontSize: '16px' }}>
+          Welcome to the University Course Management System. Manage students, lecturers, and courses.
+        </Paragraph>
       </div>
 
       {/* Statistics Cards */}
