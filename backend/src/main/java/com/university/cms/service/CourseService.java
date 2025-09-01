@@ -448,4 +448,8 @@ public class CourseService {
         Course course = getCourseById(courseId);
         return course.getLecturer() != null && course.getLecturer().getId().equals(lecturer.getId());
     }
+    
+    public long getTotalCourseCount() {
+        return courseRepository.count();
+    }
 }

@@ -37,4 +37,8 @@ public class DegreeService {
     public List<Degree> findByDepartment(String department) {
         return degreeRepository.findByDepartment(department);
     }
+    
+    public long getTotalDegreeCount() {
+        return degreeRepository.count();
+    }
 }

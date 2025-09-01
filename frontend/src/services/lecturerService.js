@@ -152,6 +152,12 @@ const lecturerService = {
     const response = await api.put(`/lecturer/courses/${courseId}/students/${studentId}/grade`, gradeData);
     return response.data;
   },
+
+  // Recent Activities
+  getRecentActivities: async () => {
+    const response = await api.get('/lecturer/recent-activities');
+    return response.data;
+  },
 };
 
 export default lecturerService;

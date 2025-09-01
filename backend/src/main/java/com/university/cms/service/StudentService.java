@@ -264,4 +264,8 @@ public class StudentService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }
+    
+    public long getTotalStudentCount() {
+        return studentRepository.count();
+    }
 }

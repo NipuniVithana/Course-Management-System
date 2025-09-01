@@ -63,14 +63,14 @@ const LecturerDashboard = () => {
           console.log(`Could not fetch materials for course ${course.id}`);
         }
         
-        // Mock average grade calculation (you can replace with actual grades later)
-        if (course.averageGrade) {
+        // Use real average grade from backend
+        if (course.averageGrade !== null && course.averageGrade !== undefined) {
           totalGrades += course.averageGrade;
           gradeCount++;
         }
       }
       
-      const averageResults = gradeCount > 0 ? Math.round(totalGrades / gradeCount) : 85; // Default to 85% if no grades
+      const averageResults = gradeCount > 0 ? Math.round(totalGrades / gradeCount) : 0; // Show 0 if no grades available
       
       setDashboardData({
         totalCourses: coursesData.length,
@@ -79,50 +79,14 @@ const LecturerDashboard = () => {
         averageResults
       });
 
-      // Generate recent activities based on actual data
-      const activities = generateRecentActivities(coursesData);
-      setRecentActivities(activities);
+      // Fetch real recent activities from backend
+      const activitiesData = await lecturerService.getRecentActivities();
+      setRecentActivities(activitiesData);
       
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       message.error('Failed to load dashboard data');
     }
-  };
-
-  const generateRecentActivities = (courses) => {
-    const activities = [];
-    
-    // Add course registration activities
-    courses.forEach((course) => {
-      const daysAgo = Math.floor(Math.random() * 7) + 1; // Random 1-7 days ago
-      
-      activities.push({
-        id: `register-${course.id}`,
-        type: 'registration',
-        title: 'Course Registration',
-        description: `Registered for "${course.title}"`,
-        time: `${daysAgo} day${daysAgo > 1 ? 's' : ''} ago`,
-        icon: 'check',
-        color: '#52c41a'
-      });
-    });
-
-    // Add some mock material activities (you can replace with real data)
-    if (courses.length > 0) {
-      const randomCourse = courses[Math.floor(Math.random() * courses.length)];
-      activities.push({
-        id: 'material-upload',
-        type: 'material',
-        title: 'Material Uploaded',
-        description: `Added lecture notes to "${randomCourse.title}"`,
-        time: '2 hours ago',
-        icon: 'file',
-        color: '#1890ff'
-      });
-    }
-
-    // Sort by most recent first and limit to 5
-    return activities.slice(0, 5);
   };
 
   return (

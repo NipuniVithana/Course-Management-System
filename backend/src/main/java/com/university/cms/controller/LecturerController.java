@@ -8,11 +8,14 @@ import com.university.cms.service.LecturerService;
 import com.university.cms.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map;
 
 @RestController
@@ -46,16 +49,20 @@ public class LecturerController {
 
     // My courses
     @GetMapping("/courses")
-    public ResponseEntity<List<Course>> getMyCourses(Authentication authentication) {
+    @PreAuthorize("hasRole('LECTURER')")
+    public ResponseEntity<?> getMyCourses(Authentication authentication) {
         try {
             String email = authentication.getName();
             User user = authService.getCurrentUser(email);
             Lecturer lecturer = lecturerService.getLecturerByUser(user);
             
-            List<Course> courses = courseService.getCoursesByLecturer(lecturer);
-            return ResponseEntity.ok(courses);
+            List<Map<String, Object>> coursesWithStats = lecturerService.getCoursesWithStats(lecturer);
+            return ResponseEntity.ok(coursesWithStats);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            e.printStackTrace(); // Add logging to see the error
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Error retrieving courses: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
     }
 
@@ -257,6 +264,24 @@ public class LecturerController {
             return ResponseEntity.ok("Grade updated successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error updating grade: " + e.getMessage());
+        }
+    }
+
+    // Recent Activities
+    @GetMapping("/recent-activities")
+    @PreAuthorize("hasRole('LECTURER')")
+    public ResponseEntity<?> getRecentActivities(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = authService.getCurrentUser(email);
+            Lecturer lecturer = lecturerService.getLecturerByUser(user);
+            
+            List<Map<String, Object>> activities = lecturerService.getRecentActivities(lecturer);
+            return ResponseEntity.ok(activities);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Failed to load recent activities: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
     }
 }
