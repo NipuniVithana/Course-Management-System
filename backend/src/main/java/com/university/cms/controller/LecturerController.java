@@ -3,9 +3,11 @@ package com.university.cms.controller;
 import com.university.cms.entity.Assignment;
 import com.university.cms.entity.Course;
 import com.university.cms.entity.Lecturer;
+import com.university.cms.entity.Student;
 import com.university.cms.entity.User;
 import com.university.cms.service.CourseService;
 import com.university.cms.service.LecturerService;
+import com.university.cms.service.StudentService;
 import com.university.cms.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +30,9 @@ public class LecturerController {
     
     @Autowired
     private LecturerService lecturerService;
+    
+    @Autowired
+    private StudentService studentService;
     
     @Autowired
     private AuthService authService;
@@ -271,7 +276,8 @@ public class LecturerController {
         }
     }
 
-    // Download course material
+    // Download course material - accessible by both lecturers and students
+    @PreAuthorize("hasRole('LECTURER') or hasRole('STUDENT')")
     @GetMapping("/courses/{courseId}/materials/{materialId}/download")
     public ResponseEntity<byte[]> downloadCourseMaterial(
             @PathVariable Long courseId,
@@ -280,10 +286,19 @@ public class LecturerController {
         try {
             String email = authentication.getName();
             User user = authService.getCurrentUser(email);
-            Lecturer lecturer = lecturerService.getLecturerByUser(user);
             
-            // Verify lecturer has access to this course
-            if (!courseService.isLecturerAssignedToCourse(lecturer, courseId)) {
+            // Check if user has access to this course
+            boolean hasAccess = false;
+            
+            if ("LECTURER".equals(user.getRole().name())) {
+                Lecturer lecturer = lecturerService.getLecturerByUser(user);
+                hasAccess = courseService.isLecturerAssignedToCourse(lecturer, courseId);
+            } else if ("STUDENT".equals(user.getRole().name())) {
+                Student student = studentService.getStudentByUser(user);
+                hasAccess = studentService.isStudentEnrolledInCourse(student, courseId);
+            }
+            
+            if (!hasAccess) {
                 return ResponseEntity.status(403).build();
             }
             
@@ -403,6 +418,7 @@ public class LecturerController {
         }
     }
 
+    @PreAuthorize("hasRole('LECTURER')")
     @GetMapping("/assignments/{assignmentId}/download")
     public ResponseEntity<byte[]> downloadAssignmentFile(
             @PathVariable Long assignmentId,
@@ -468,6 +484,7 @@ public class LecturerController {
         }
     }
 
+    @PreAuthorize("hasRole('LECTURER')")
     @GetMapping("/submissions/{submissionId}/download")
     public ResponseEntity<byte[]> downloadSubmissionFile(
             @PathVariable Long submissionId,

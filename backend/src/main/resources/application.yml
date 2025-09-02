@@ -45,3 +45,13 @@ logging:
   level:
     com.university.cms: DEBUG
     org.springframework.security: DEBUG
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized

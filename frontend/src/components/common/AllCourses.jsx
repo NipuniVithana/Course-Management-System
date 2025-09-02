@@ -229,16 +229,16 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
             <div style={{ 
               display: 'flex', 
               justifyContent: 'flex-start',
-              width: '140px'  // Same total width as Button.Group
+              width: '140px'
             }}>
-              <div style={{ width: '70px' }}></div> {/* Spacer same as "Assigned" button */}
+              <div style={{ width: '70px' }}></div> 
               <Button
                 size="small"
                 disabled
                 style={{ 
                   color: '#52c41a', 
                   borderColor: '#52c41a',
-                  borderRadius: '6px' // Fully rounded
+                  borderRadius: '6px'
                 }}
               >
                 Enrolled
@@ -251,9 +251,9 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
           <div style={{ 
             display: 'flex', 
             justifyContent: 'flex-start',
-            width: '140px'  // Same total width as Button.Group
+            width: '140px'
           }}>
-            <div style={{ width: '70px' }}></div> {/* Spacer same as "Assigned" button */}
+            <div style={{ width: '70px' }}></div> 
             <Button
               type="primary"
               size="small"
@@ -261,7 +261,7 @@ const AllCourses = ({ userRole = 'LECTURER' }) => {
               onClick={() => handleCourseAction(record)}
               disabled={record.status !== 'ACTIVE'}
               style={{ 
-                borderRadius: '6px' // Fully rounded
+                borderRadius: '6px'
               }}
             >
               {actionTextCapitalized}

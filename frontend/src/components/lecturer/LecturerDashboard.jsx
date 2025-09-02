@@ -38,7 +38,7 @@ const LecturerDashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadDashboardData = async () => {
     try {
@@ -64,7 +64,6 @@ const LecturerDashboard = () => {
           console.log(`Could not fetch materials for course ${course.id}`);
         }
         
-        // Use real average grade from backend
         if (course.averageGrade !== null && course.averageGrade !== undefined) {
           totalGrades += course.averageGrade;
           gradeCount++;
@@ -80,7 +79,6 @@ const LecturerDashboard = () => {
         averageResults
       });
 
-      // Fetch real recent activities from backend
       const activitiesData = await lecturerService.getRecentActivities();
       setRecentActivities(activitiesData);
       

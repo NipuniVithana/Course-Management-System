@@ -1,5 +1,4 @@
 -- Remove capacity column from courses table
--- This script ensures the capacity column is removed from the courses table
 
 USE course_management_system;
 

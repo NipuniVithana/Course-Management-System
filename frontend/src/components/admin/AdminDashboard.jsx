@@ -54,7 +54,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Make this function available globally
   window.addAdminActivity = (title, description, type) => {
     try {
       const newActivity = {
@@ -71,7 +70,6 @@ const AdminDashboard = () => {
       // Add new activity at the beginning
       activities.unshift(newActivity);
       
-      // Keep only the last 50 activities to prevent localStorage from growing too large
       const limitedActivities = activities.slice(0, 50);
       
       localStorage.setItem('adminActivities', JSON.stringify(limitedActivities));
@@ -86,7 +84,6 @@ const AdminDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      // Try to get dashboard stats, if it fails, use mock data
       try {
         const stats = await adminService.getDashboardStats();
         setDashboardData(stats);

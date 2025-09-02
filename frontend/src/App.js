@@ -37,8 +37,6 @@ import Profile from './components/common/Profile';
 function App() {
   const { user, loading } = useAuth();
 
-  console.log('App.js - Current user:', user, 'Loading:', loading);
-
   if (loading) {
     return (
       <div style={{ 

@@ -178,19 +178,4 @@ public class CourseController {
             return ResponseEntity.badRequest().body(response);
         }
     }
-
-    // Test endpoint - remove after debugging
-    @GetMapping("/test/courses")
-    public ResponseEntity<List<Course>> getCoursesTest() {
-        System.out.println("DEBUG: Test endpoint /test/courses called");
-        try {
-            List<Course> courses = courseService.getAllCourses();
-            System.out.println("DEBUG: Test endpoint - courses retrieved: " + courses.size());
-            return ResponseEntity.ok(courses);
-        } catch (Exception e) {
-            System.out.println("DEBUG: Test endpoint error: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().body(new ArrayList<>());
-        }
-    }
 }

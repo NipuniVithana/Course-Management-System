@@ -48,7 +48,7 @@ docker-compose up -d
 ### **Step 4: Access Application**
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8080/api
-- **H2 Console**: http://localhost:8080/h2-console
+- **MySQL Database**: localhost:3306
 - **phpMyAdmin**: http://localhost:8081
 
 ### **Step 5: Login with Demo Accounts**
@@ -104,28 +104,14 @@ mvn -version
 
 #### **2. Configure Database**
 
-**Option A: H2 Database (Development)**
+**MySQL Database Configuration**
 ```yaml
 # backend/src/main/resources/application.yml
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: 
-  h2:
-    console:
-      enabled: true
-```
-
-**Option B: MySQL Database (Production)**
-```yaml
-# backend/src/main/resources/application.yml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/course_management_system
-    username: cms_user
-    password: cms_password
+    url: jdbc:mysql://localhost:3306/cms_database
+    username: root
+    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
 ```
 
@@ -150,13 +136,6 @@ mvn clean package
 
 ### **Database Setup**
 
-#### **H2 Database (Default)**
-- Automatically configured
-- Access console: http://localhost:8080/h2-console
-- JDBC URL: `jdbc:h2:mem:testdb`
-- Username: `sa`
-- Password: (empty)
-
 #### **MySQL Database**
 
 **Option 1: Docker**
@@ -173,16 +152,16 @@ brew install mysql             # macOS
 
 # Create database
 mysql -u root -p
-CREATE DATABASE course_management_system;
+CREATE DATABASE cms_database;
 CREATE USER 'cms_user'@'localhost' IDENTIFIED BY 'cms_password';
-GRANT ALL PRIVILEGES ON course_management_system.* TO 'cms_user'@'localhost';
+GRANT ALL PRIVILEGES ON cms_database.* TO 'cms_user'@'localhost';
 FLUSH PRIVILEGES;
 
 # Import schema
-mysql -u cms_user -p course_management_system < database/schema.sql
+mysql -u cms_user -p cms_database < database/schema.sql
 
 # Import sample data
-mysql -u cms_user -p course_management_system < database/sample_data.sql
+mysql -u cms_user -p cms_database < database/sample_data.sql
 ```
 
 ---
@@ -232,7 +211,7 @@ docker-compose up -d --build frontend
 ```bash
 # Database
 MYSQL_ROOT_PASSWORD=rootpassword
-MYSQL_DATABASE=course_management_system
+MYSQL_DATABASE=cms_database
 MYSQL_USER=cms_user
 MYSQL_PASSWORD=cms_password
 
@@ -251,7 +230,7 @@ MYSQL_PORT=3306
 ```bash
 # Database (Use strong passwords)
 MYSQL_ROOT_PASSWORD=StrongRootPassword123!
-MYSQL_DATABASE=course_management_system
+MYSQL_DATABASE=cms_database
 MYSQL_USER=cms_prod_user
 MYSQL_PASSWORD=StrongUserPassword123!
 
@@ -412,10 +391,10 @@ kill -9 <PID>
 sudo systemctl status mysql
 
 # Test connection
-mysql -u cms_user -p -h localhost
+mysql -u root -p -h localhost cms_database
 
-# Check H2 console
-http://localhost:8080/h2-console
+# Check database container
+docker ps | grep mysql
 ```
 
 #### **Java Version Issues**

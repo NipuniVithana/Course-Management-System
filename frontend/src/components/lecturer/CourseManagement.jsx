@@ -77,7 +77,7 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
   // Role-based configuration
   const isStudent = userRole === 'STUDENT';
   const [studentGrade, setStudentGrade] = useState(null);
-  const [studentSubmissions, setStudentSubmissions] = useState({}); // Map of assignmentId -> submission data
+  const [studentSubmissions, setStudentSubmissions] = useState({});
 
   useEffect(() => {
     const loadData = async () => {
@@ -107,7 +107,7 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
               setAssignments([]);
             }
           } else {
-            // For lecturers, load all data as before
+            // For lecturers, load all data
             const [courseData, studentsData, materialsData, assignmentsData] = await Promise.all([
               lecturerService.getCourseById(courseId),
               lecturerService.getEnrolledStudents(courseId),
@@ -138,7 +138,7 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
     };
     
     loadData();
-  }, [courseId, isStudent]); // loadStudentSubmissions is defined inside loadData, so no need to add it as dependency
+  }, [courseId, isStudent]);
 
   // Function to load student submissions for all assignments
   const loadStudentSubmissions = async (assignmentsData) => {
@@ -157,7 +157,6 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
             submissionsMap[assignment.id] = submissionData;
           }
         } catch (error) {
-          // No submission found for this assignment, which is normal
           console.log(`No submission found for assignment ${assignment.id}`);
         }
       }
@@ -376,7 +375,6 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
   // Handle tab changes
   const handleTabChange = (activeKey) => {
     setActiveTab(activeKey);
-    // No need to load submissions here since they're loaded automatically
   };
 
   const handleDownloadSubmission = async (submission) => {
@@ -405,7 +403,6 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
         values
       );
       
-      // Update the local students state immediately
       setStudents(prevStudents => 
         prevStudents.map(student => 
           student.id === selectedStudent.id 
@@ -861,7 +858,6 @@ const CourseManagement = ({ userRole = 'LECTURER' }) => {
                                 </Space>
                               );
                             } else {
-                              // Student hasn't submitted yet
                               return (
                                 <Button
                                   type="primary"

@@ -181,27 +181,5 @@ public class DataInitializer implements CommandLineRunner {
         databaseCourse.setCreatedAt(LocalDateTime.now());
         databaseCourse.setUpdatedAt(LocalDateTime.now());
         courseRepository.save(databaseCourse);
-
-        // Print login credentials
-        System.out.println("=================================================");
-        System.out.println("INITIAL LOGIN CREDENTIALS:");
-        System.out.println("=================================================");
-        System.out.println("Admin Login:");
-        System.out.println("  Email: admin@university.edu");
-        System.out.println("  Password: admin123");
-        System.out.println("-------------------------------------------------");
-        System.out.println("Lecturer Login:");
-        System.out.println("  Email: lecturer@university.edu");
-        System.out.println("  Password: lecturer123");
-        System.out.println("-------------------------------------------------");
-        System.out.println("Student Login:");
-        System.out.println("  Email: student@university.edu");
-        System.out.println("  Password: student123");
-        System.out.println("=================================================");
-        System.out.println("Sample data created:");
-        System.out.println("- 2 Degrees: Computer Science, Business Administration");
-        System.out.println("- 3 Users: Admin, Lecturer, Student");
-        System.out.println("- 3 Courses: Java Programming, Web Development, Database Systems");
-        System.out.println("=================================================");
     }
 }

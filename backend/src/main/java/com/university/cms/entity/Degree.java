@@ -25,7 +25,7 @@ public class Degree {
     private String department;
     
     @Column(name = "duration", nullable = false)
-    private Integer duration; // in years
+    private Integer duration;
     
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;

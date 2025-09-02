@@ -1,34 +1,42 @@
 # Course Management System - Frontend
 
-A modern React.js frontend application for the Course Management System with role-based access control.
+A modern React.js frontend application for the Course Management System with role-based access control and comprehensive course management features.
 
 ## Features
 
 ### 🔴 Admin Features
 - **System Management**: Full system control and oversight
 - **User Management**: Manage all users (Lecturers & Students)
-- **Course Management**: Create, assign courses to lecturers
+- **Course Management**: Create, edit, delete courses and assign lecturers
+- **Degree Management**: Manage degree programs and course mappings
 - **Analytics Dashboard**: System-wide statistics and reports
+- **Data Export**: Export system data and reports
 
 ### 🟡 Lecturer Features
-- **Student Management**: View enrolled students in their courses
-- **Assessment Management**: Create assignments, exams, grade submissions
-- **Grade Management**: Enter and update grades for their courses
-- **Course Analytics**: Track student performance
+- **Course Registration**: Register/unregister for available courses
+- **Student Management**: View enrolled students in registered courses
+- **Assignment Management**: Create, upload, and manage assignments
+- **Course Materials**: Upload and manage course materials (PDFs, documents)
+- **Grade Management**: Grade student submissions and provide feedback
+- **Course Analytics**: Track student performance and engagement
+- **Assignment Submissions**: View and download student assignment submissions
 
 ### 🔵 Student Features
-- **Course Enrollment**: Browse and enroll in available courses
-- **Academic Progress**: View grades and GPA
-- **Assignment Submission**: Submit assignments and view feedback
-- **Profile Management**: Update personal information and preferences
+- **Course Browsing**: Browse all available courses in the system
+- **Course Enrollment**: Enroll in available courses
+- **Assignment Submission**: Submit assignments with file uploads
+- **Academic Progress**: View grades, assignments, and course materials
+- **Course Materials**: Download course materials uploaded by lecturers
+- **Profile Management**: Update personal information
 
 ## Technology Stack
 
 - **React.js 18+** - Frontend framework
-- **Material-UI (MUI)** - UI component library
+- **Ant Design (antd)** - UI component library
 - **React Router v6** - Client-side routing
 - **Axios** - HTTP client for API calls
 - **React Context** - State management
+- **Day.js** - Date manipulation library
 - **Modern JavaScript (ES6+)** - Programming language
 
 ## Getting Started
@@ -50,13 +58,21 @@ A modern React.js frontend application for the Course Management System with rol
    npm install
    ```
 
-3. **Start development server**:
+3. **Configure environment**:
+   ```bash
+   cp .env.example .env
+   # Or create .env file with:
+   echo "PORT=3001" > .env
+   echo "REACT_APP_API_URL=http://localhost:8080/api" >> .env
+   ```
+
+4. **Start development server**:
    ```bash
    npm start
    ```
 
-4. **Open your browser**:
-   - Application will be available at: `http://localhost:3000`
+5. **Open your browser**:
+   - Application will be available at: `http://localhost:3001`
    - The page will automatically reload when you make changes
 
 ### Build for Production
@@ -72,11 +88,25 @@ This builds the app for production to the `build` folder.
 ```
 src/
 ├── components/
-│   ├── auth/              # Authentication components
-│   ├── admin/             # Admin dashboard components
-│   ├── lecturer/          # Lecturer dashboard components
-│   ├── student/           # Student dashboard components
-│   └── common/            # Shared components
+│   ├── auth/              # Authentication components (Login, Register)
+│   ├── admin/             # Admin dashboard and management components
+│   │   ├── AdminDashboard.jsx    # Admin dashboard with statistics
+│   │   ├── Students.jsx          # Student management
+│   │   ├── Lecturers.jsx         # Lecturer management
+│   │   ├── Courses.jsx           # Course management
+│   │   ├── AddCourse.jsx         # Course creation form
+│   │   └── Degrees.jsx           # Degree program management
+│   ├── lecturer/          # Lecturer dashboard and course management
+│   │   ├── LecturerDashboard.jsx # Lecturer dashboard with statistics
+│   │   ├── MyCourses.jsx         # Lecturer's registered courses
+│   │   └── CourseManagement.jsx  # Course details, materials, assignments
+│   ├── student/           # Student dashboard and course interaction
+│   │   └── StudentDashboard.jsx  # Student dashboard with enrollment info
+│   └── common/            # Shared components across roles
+│       ├── AllCourses.jsx        # Course browsing for all roles
+│       ├── Profile.jsx           # User profile management
+│       ├── Layout.jsx            # Common layout wrapper
+│       └── ProtectedRoute.jsx    # Route protection by role
 ├── context/
 │   └── AuthContext.js     # Authentication state management
 ├── services/
@@ -84,10 +114,7 @@ src/
 │   ├── adminService.js    # Admin API calls
 │   ├── lecturerService.js # Lecturer API calls
 │   └── studentService.js  # Student API calls
-├── utils/
-│   ├── constants.js       # Application constants
-│   └── helpers.js         # Utility functions
-├── App.js                 # Main application component
+├── App.js                 # Main application component with routing
 └── index.js               # Application entry point
 ```
 
@@ -101,51 +128,86 @@ For testing purposes, you can use these demo credentials:
 
 ## API Configuration
 
-The frontend expects the backend API to be running on:
-- **Development**: `http://localhost:8080`
+The frontend is configured to connect to the backend API:
+- **Development**: `http://localhost:8080/api` (runs on port 3001)
+- **Backend Port**: 8080
+- **Frontend Port**: 3001 (configured in .env)
 - **Production**: Set `REACT_APP_API_URL` environment variable
-
-## Available Scripts
-
-- `npm start` - Runs the app in development mode
-- `npm test` - Launches the test runner
-- `npm run build` - Builds the app for production
-- `npm run eject` - Ejects from Create React App (irreversible)
 
 ## Environment Variables
 
 Create a `.env` file in the frontend root directory:
 
 ```
+PORT=3001
 REACT_APP_API_URL=http://localhost:8080/api
-REACT_APP_APP_NAME=Course Management System
 ```
+
+## Available Scripts
+
+- `npm start` - Runs the app in development mode on port 3001
+- `npm test` - Launches the test runner
+- `npm run build` - Builds the app for production
+- `npm run eject` - Ejects from Create React App (irreversible)
 
 ## Features in Detail
 
+### Course Management System
+- **Unified Course Browsing**: All roles can browse available courses
+- **Role-based Registration**: Lecturers can register for courses they want to teach
+- **Student Enrollment**: Students can enroll in courses taught by registered lecturers
+- **File Upload/Download**: Support for course materials and assignment submissions
+- **Real-time Statistics**: Live dashboard data for all roles
+
+### Assignment & Grading System
+- **Assignment Creation**: Lecturers can create assignments with file requirements
+- **File Submission**: Students can submit assignments with file attachments
+- **Grading Interface**: Lecturers can grade submissions and provide feedback
+- **Grade Tracking**: Students can view their grades and assignment feedback
+
 ### Authentication System
-- JWT-based authentication
-- Role-based access control
-- Session management
-- Password reset functionality
+- JWT-based authentication with role-based access
+- Session management and automatic token refresh
+- Protected routes based on user roles
+- Secure logout with token cleanup
 
-### Role-Based UI
-- Different themes for each role
-- Role-specific navigation
-- Protected routes
-- Permission-based feature access
+### UI/UX Features
+- **Ant Design Components**: Modern, consistent UI components
+- **Responsive Design**: Mobile-friendly interface optimized for all devices
+- **Role-specific Themes**: Different layouts and features per user role
+- **Loading States**: Comprehensive loading indicators and error handling
+- **Real-time Updates**: Live data refresh without page reload
 
-### Responsive Design
-- Mobile-friendly interface
-- Tablet optimized layouts
-- Desktop full-feature experience
-- Cross-browser compatibility
+## Dependencies
 
-### Real-time Features
-- Live data updates
-- Notification system
-- Progress tracking
-- Status updates
+### Core Dependencies
+- **react**: ^18.2.0 - React framework
+- **react-dom**: ^18.2.0 - React DOM rendering
+- **react-router-dom**: ^6.8.0 - Client-side routing
+- **antd**: ^5.8.0 - Ant Design UI components
+- **@ant-design/icons**: ^5.2.0 - Ant Design icon set
+- **axios**: ^1.3.0 - HTTP client for API calls
+- **dayjs**: ^1.11.17 - Date manipulation library
+
+### Development Dependencies
+- **react-scripts**: 5.0.1 - Create React App build tools
+- **@testing-library/react**: ^13.3.0 - Testing utilities
+- **@testing-library/jest-dom**: ^5.16.4 - Jest DOM matchers
+
+## Browser Support
+
+- Chrome (recommended)
+- Firefox
+- Safari
+- Edge
+
+## Performance Optimization
+
+- Code splitting with React.lazy()
+- Optimized bundle size
+- Efficient re-rendering with React hooks
+- Lazy loading of components
+- Image optimization
 
 ## Contributing
 

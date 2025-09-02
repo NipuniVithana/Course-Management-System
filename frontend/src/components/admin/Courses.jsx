@@ -54,7 +54,6 @@ const Courses = () => {
         adminService.getAllCourses(),
         adminService.getAllDegrees()
       ]);
-      console.log('Courses data:', coursesData); // Debug log
       setCourses(coursesData);
       setDegrees(degreesData);
     } catch (error) {
@@ -101,7 +100,7 @@ const Courses = () => {
       // Map frontend field names to backend field names
       const courseData = {
         courseCode: values.courseCode,
-        courseName: values.title,  // Frontend uses 'title', backend expects 'courseName'
+        courseName: values.title,
         description: values.description,
         credits: parseInt(values.credits),
         degreeId: parseInt(values.degreeId),
@@ -151,7 +150,7 @@ const Courses = () => {
       // Map frontend field names to backend field names
       const courseData = {
         courseCode: values.courseCode,
-        courseName: values.title,  // Frontend uses 'title', backend expects 'courseName'
+        courseName: values.title, 
         description: values.description,
         credits: parseInt(values.credits),
         degreeId: parseInt(values.degreeId),

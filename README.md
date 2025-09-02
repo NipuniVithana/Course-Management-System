@@ -8,32 +8,32 @@ A modern, full-stack University Course Management System built with **Spring Boo
 
 ### 👨‍💼 **Admin Features**
 - ✅ User management (create, update, delete users)
-- ✅ Course management (create, assign lecturers, manage enrollments)
+- ✅ Course management (create, edit, delete courses)
+- ✅ Degree program management and course mapping
 - ✅ System-wide analytics and reporting
 - ✅ Role-based access control
-- ✅ Academic year and semester management
 
 ### 👨‍🏫 **Lecturer Features**
-- ✅ Course management (view assigned courses)
-- ✅ Assignment creation and management
-- ✅ Student enrollment management
-- ✅ Grading and feedback system
-- ✅ Course announcements
-- ✅ Student progress tracking
+- ✅ Course registration (register for courses to teach)
+- ✅ Assignment creation and management with file uploads
+- ✅ Student enrollment viewing for registered courses
+- ✅ Grading and feedback system for submissions
+- ✅ Course materials upload and management
+- ✅ Assignment submission viewing and downloads
 
 ### 👨‍🎓 **Student Features**
-- ✅ Course enrollment and browsing
-- ✅ Assignment submission
+- ✅ Course browsing and enrollment
+- ✅ Assignment submission with file uploads
 - ✅ Grade viewing and progress tracking
-- ✅ Course materials access
-- ✅ Announcement viewing
+- ✅ Course materials download and access
+- ✅ Assignment feedback viewing
 - ✅ Profile management
 
 ## 🛠️ **Technology Stack**
 
 ### **Frontend**
 - **React.js 18** - Modern UI library
-- **Material-UI (MUI)** - UI component library
+- **Ant Design (antd)** - UI component library
 - **React Router** - Client-side routing
 - **Axios** - HTTP client
 - **Context API** - State management
@@ -46,7 +46,6 @@ A modern, full-stack University Course Management System built with **Spring Boo
 - **Maven** - Dependency management
 
 ### **Database**
-- **H2 Database** - Development (in-memory)
 - **MySQL 8.0** - Production database
 - **JPA/Hibernate** - ORM
 
@@ -77,7 +76,6 @@ Course Management System/
 │   └── pom.xml
 ├── 📁 database/                 # Database schemas and scripts
 │   ├── schema.sql              # MySQL schema
-│   ├── h2_schema.sql          # H2 schema
 │   ├── sample_data.sql        # Sample data
 │   └── docker-compose.yml     # Database setup
 ├── 📁 deployment/               # Docker deployment files
@@ -114,7 +112,7 @@ cp .env.example .env
 docker-compose up -d
 
 # 4. Access the application
-# Frontend: http://localhost:3000
+# Frontend: http://localhost:3001
 # Backend API: http://localhost:8080/api
 # phpMyAdmin: http://localhost:8081
 ```
@@ -139,18 +137,22 @@ cd frontend
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (runs on port 3001)
 npm start
 
-# Frontend will run on http://localhost:3000
+# Frontend will run on http://localhost:3001
 ```
 
 #### **Database Setup**
 ```bash
-# H2 (Development) - Automatically configured
-# Access H2 console: http://localhost:8080/h2-console
+# For Development (Manual MySQL setup):
+# Database name: cms_database
+# Username: root, Password: root
 
-# MySQL (Production)
+# For Docker deployment:
+# Database name: course_management_system
+# Username: cms_user, Password: cms_password
+
 cd database
 docker-compose up -d
 # Or manually create database and run schema.sql
@@ -249,8 +251,8 @@ cd frontend && npm start
 # Backend development server
 cd backend && mvn spring-boot:run
 
-# Database (H2 in-memory)
-# Automatically configured
+# Database (MySQL)
+cd database && docker-compose up -d
 ```
 
 ### **Production Environment**
@@ -350,10 +352,9 @@ lsof -i :8080
 
 #### **Database Connection**
 ```bash
-# Check H2 console: http://localhost:8080/h2-console
-# JDBC URL: jdbc:h2:mem:testdb
-# Username: sa
-# Password: (empty)
+# Check MySQL container: docker ps
+# Connect to MySQL: docker exec -it cms_mysql mysql -u root -p
+# Database name: cms_database (development) / course_management_system (docker)
 ```
 
 #### **CORS Issues**
@@ -374,32 +375,6 @@ docker-compose logs [service-name]
 docker-compose up -d --build
 ```
 
-## 📞 **Support**
-
-- 📧 **Email**: support@university.edu
-- 📖 **Documentation**: [docs/](docs/)
-- 🐛 **Issues**: GitHub Issues
-- 💬 **Discussions**: GitHub Discussions
-
-## 📄 **License**
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🏆 **Assignment Requirements Fulfilled**
-
-✅ **Modern Web Application** - React.js + Spring Boot  
-✅ **Three User Roles** - Admin, Lecturer, Student  
-✅ **Authentication System** - JWT-based security  
-✅ **Database Integration** - JPA/Hibernate with MySQL/H2  
-✅ **Responsive Design** - Material-UI components  
-✅ **RESTful APIs** - Complete CRUD operations  
-✅ **Deployment Ready** - Docker containerization  
-✅ **Documentation** - Comprehensive guides and reports  
-✅ **Testing** - Unit and integration tests  
-✅ **GitHub Repository** - Version controlled codebase  
-
----
-
 ## 🚀 **Getting Started Now**
 
 ```bash
@@ -409,8 +384,7 @@ cd "Course Management System/deployment"
 cp .env.example .env
 docker-compose up -d
 
-# Access at http://localhost:3000
+# Access at http://localhost:3001
 # Login with: admin@university.edu / admin123
 ```
 
-**Built with ❤️ for University Course Management**

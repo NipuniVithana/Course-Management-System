@@ -226,22 +226,22 @@ public class StudentService {
     // Update student profile
     public void updateStudentProfile(Student student, Map<String, Object> profileData) {
         // Update student fields
-        if (profileData.containsKey("firstName")) {
+        if (profileData.containsKey("firstName") && profileData.get("firstName") != null) {
             student.setFirstName(profileData.get("firstName").toString());
         }
-        if (profileData.containsKey("lastName")) {
+        if (profileData.containsKey("lastName") && profileData.get("lastName") != null) {
             student.setLastName(profileData.get("lastName").toString());
         }
-        if (profileData.containsKey("phone")) {
+        if (profileData.containsKey("phone") && profileData.get("phone") != null) {
             student.setPhone(profileData.get("phone").toString());
         }
-        if (profileData.containsKey("address")) {
+        if (profileData.containsKey("address") && profileData.get("address") != null) {
             student.setAddress(profileData.get("address").toString());
         }
-        if (profileData.containsKey("program")) {
+        if (profileData.containsKey("program") && profileData.get("program") != null) {
             student.setProgram(profileData.get("program").toString());
         }
-        if (profileData.containsKey("yearOfStudy")) {
+        if (profileData.containsKey("yearOfStudy") && profileData.get("yearOfStudy") != null) {
             student.setYearOfStudy(Integer.valueOf(profileData.get("yearOfStudy").toString()));
         }
         
@@ -249,7 +249,7 @@ public class StudentService {
         studentRepository.save(student);
         
         // Update user email if provided
-        if (profileData.containsKey("email")) {
+        if (profileData.containsKey("email") && profileData.get("email") != null) {
             User user = student.getUser();
             user.setEmail(profileData.get("email").toString());
             userRepository.save(user);
@@ -277,10 +277,6 @@ public class StudentService {
     // Assignment-related methods for students
     public List<Assignment> getCourseAssignments(Long courseId) {
         return assignmentRepository.findByCourseId(courseId);
-    }
-    
-    public boolean isStudentEnrolledInCourse(Student student, Long courseId) {
-        return enrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId).isPresent();
     }
     
     public Long getCourseIdByAssignmentId(Long assignmentId) {
@@ -397,5 +393,11 @@ public class StudentService {
         } else {
             return null; // No submission found
         }
+    }
+
+    public boolean isStudentEnrolledInCourse(Student student, Long courseId) {
+        Optional<Enrollment> enrollment = enrollmentRepository
+                .findByStudentIdAndCourseId(student.getId(), courseId);
+        return enrollment.isPresent() && enrollment.get().getStatus() == Enrollment.Status.ENROLLED;
     }
 }
