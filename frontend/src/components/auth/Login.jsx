@@ -6,8 +6,6 @@ import {
   Typography,
   Card,
   Alert,
-  Space,
-  Divider,
   Row,
   Col
 } from 'antd';
@@ -135,32 +133,6 @@ const Login = () => {
                 <RouterLink to="/register">Sign Up</RouterLink>
               </Link>
             </div>
-
-            <Divider>Demo Credentials</Divider>
-
-            <Card 
-              size="small" 
-              style={{ 
-                background: '#f8f9fa', 
-                border: '1px solid #e9ecef',
-                borderRadius: '8px'
-              }}
-            >
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <div>
-                  <Text strong style={{ color: '#1890ff' }}>Admin:</Text>
-                  <Text style={{ marginLeft: '8px' }}>admin@university.edu / admin123</Text>
-                </div>
-                <div>
-                  <Text strong style={{ color: '#52c41a' }}>Lecturer:</Text>
-                  <Text style={{ marginLeft: '8px' }}>lecturer@university.edu / lecturer123</Text>
-                </div>
-                <div>
-                  <Text strong style={{ color: '#fa8c16' }}>Student:</Text>
-                  <Text style={{ marginLeft: '8px' }}>student@university.edu / student123</Text>
-                </div>
-              </Space>
-            </Card>
           </Card>
         </Col>
       </Row>
